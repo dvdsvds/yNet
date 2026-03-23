@@ -2,7 +2,7 @@
 
 A lightweight HTTP/HTTPS framework built with C++
 
-**[한국어](README.md)**
+**[Korean](../README.md)**
 
 ---
 
