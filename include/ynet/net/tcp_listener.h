@@ -15,5 +15,6 @@ namespace ynet {
             int listen();
             std::unique_ptr<Connection> accept();
             void close();
+            int getFd() const { return server_fd; }
     };
 }

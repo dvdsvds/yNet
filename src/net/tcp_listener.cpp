@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include "ynet/net/event_loop.h"
 
 using namespace ynet;
 
@@ -12,6 +13,7 @@ int TcpListener::bind() {
     if(server_fd == -1) {
         return -1;
     }
+    EventLoop::setNonBlocking(server_fd);
 
     int opt = 1;
     int sockopt = ::setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
@@ -40,6 +42,8 @@ std::unique_ptr<Connection> TcpListener::accept() {
     if(client_fd == -1) {
         return nullptr;
     }
+    EventLoop::setNonBlocking(client_fd);
+
     char ip[INET_ADDRSTRLEN]; 
     ::inet_ntop(AF_INET, &client_addr.sin_addr, ip, sizeof(ip));
     uint16_t port = ntohs(client_addr.sin_port);
