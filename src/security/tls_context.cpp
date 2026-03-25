@@ -1,5 +1,7 @@
 #include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <stdexcept>
+#include <iostream>
 #include <ynet/security/tls_context.h>
 
 using namespace ynet;
@@ -22,11 +24,8 @@ TlsContext::TlsContext(const std::string& cert_path, const std::string& key_path
 
 SSL* TlsContext::wrap(int fd) {
     SSL* ssl = SSL_new(ctx);
-    if(ssl == nullptr) {
-        throw std::runtime_error("SSL_new failed");
-    }
+    if(ssl == nullptr) { throw std::runtime_error("SSL_new failed"); }
     SSL_set_fd(ssl, fd);
-    SSL_accept(ssl);
     return ssl;
 }
 

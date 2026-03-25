@@ -20,7 +20,7 @@ namespace ynet {
             ssize_t read(char* buf, size_t len);
             ssize_t write(const char* buf, size_t len);
             void close();
-
+            bool handshake();
 
             int getClientFd() const {
                 return client_fd;
@@ -31,5 +31,6 @@ namespace ynet {
             uint16_t getClientPort() const {
                 return client_port;
             }
+            SSL* getSSL() const { return ssl; }
     };
 }

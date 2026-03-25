@@ -1,3 +1,4 @@
+#include <string>
 #include <ynet/server.h>
 #include <iostream>
 
@@ -14,10 +15,10 @@ void Server::start() {
     }
 
     ev.add(tcp_listener.getFd(), EPOLLIN);
-    struct epoll_event events[config.max_connections];
+    std::vector<epoll_event> events(config.max_connections);
 
     while(1) {
-        int wait = ev.wait(events, -1);
+        int wait = ev.wait(events.data(), -1);
         for(int i = 0; i < wait; i++) {
             if(events[i].data.fd == tcp_listener.getFd()) {
                 auto conn = tcp_listener.accept();
@@ -43,18 +44,45 @@ void Server::start() {
                         std::lock_guard<std::mutex> lock(conn_mtx);
                         conn = connections[fd].get();
                     }
-                    char buf[4096];
-                    ssize_t n = conn->read(buf, sizeof(buf));
+                    if(conn->getSSL() && !conn->handshake()) {
+                        std::lock_guard<std::mutex> lock(conn_mtx);
+                        connections.erase(fd);
+                        return;
+                    }
 
-                    if(n <= 0) {
-                        {   
-                            std::lock_guard<std::mutex> lock(conn_mtx);
-                            connections.erase(fd);
+                    std::string raw;
+                    char buf[4096];
+
+                    while(true) {
+                        ssize_t n = conn->read(buf, sizeof(buf));
+                        if(n <= 0) break;    
+                        raw.append(buf, n);
+                        if(raw.find("\r\n\r\n") != std::string::npos) break;
+                    }
+
+                    size_t header_end = raw.find("\r\n\r\n");
+                    if(header_end != std::string::npos) {
+                        size_t body_start = header_end + 4;
+                        size_t content_length = 0;
+                        size_t cl_pos = raw.find("Content-Length: ");
+                        if(cl_pos != std::string::npos) {
+                            size_t cl_end = raw.find("\r\n", cl_pos);
+                            content_length = std::stoul(raw.substr(cl_pos + 16, cl_end - cl_pos - 16));
                         }
+                        while(raw.size() - body_start < content_length) {
+                            ssize_t n = conn->read(buf, sizeof(buf));
+                            if(n <= 0) break;
+                            raw.append(buf, n);
+                        }
+                    }
+
+                    if(raw.empty()) {
+                        std::lock_guard<std::mutex> lock(conn_mtx);
+                        connections.erase(fd);
                         return ;
                     };
 
-                    auto parseResult = Request::parse(buf, n);
+                    auto parseResult = Request::parse(raw.c_str(), raw.size());
                     parseResult.setClientIP(conn->getClientIP());
                     if(WebSocket::isUpgrade(parseResult)) {
                         auto it = ws_routes.find(parseResult.getPath());
@@ -76,7 +104,14 @@ void Server::start() {
                         if(handler) {
                             (*handler)(parseResult, res);
                         } else {
-                            res.status(404).body("Not Found");
+                            bool served = false;
+                            for(auto& static_file : static_files) {
+                                if(static_file.tryServe(parseResult, res)) {
+                                    served = true;
+                                    break;
+                                }
+                            }
+                            if(!served) res.status(404).body("Not Found");
                         }
                     };
 
@@ -88,9 +123,13 @@ void Server::start() {
 
                     next();
                     res.send(*conn);
-                    {
+
+                    auto conn_header = parseResult.getHeader("Connection");
+                    if(conn_header.has_value() && conn_header.value() == "close") {
                         std::lock_guard<std::mutex> lock(conn_mtx);
                         connections.erase(fd);
+                    } else {
+                        ev.add(fd, EPOLLIN);
                     }
                 });
             }
@@ -112,4 +151,8 @@ void Server::use(Middleware mw) {
 
 void Server::ws(const std::string& path, WsHandler handler) {
     ws_routes[path] = handler;
+}
+
+void Server::serveStatic(const std::string& prefix, const std::string& dir) {
+    static_files.emplace_back(prefix, dir);
 }

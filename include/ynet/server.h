@@ -10,6 +10,7 @@
 #include "ynet/net/thread_pool.h"
 #include "ynet/net/event_loop.h"
 #include "ynet/net/websocket.h"
+#include "ynet/static_file.h"
 
 namespace ynet {
     using WsHandler = std::function<void(WebSocket&)>;
@@ -25,6 +26,7 @@ namespace ynet {
             ThreadPool tp;
             std::mutex conn_mtx;
             std::unordered_map<std::string, WsHandler> ws_routes;
+            std::vector<StaticFileServer> static_files;
         public:
             Server(const Config& config) :
                 config(config), tcp_listener(config), ev(config.max_connections), tp(std::thread::hardware_concurrency()) {
@@ -37,5 +39,6 @@ namespace ynet {
             void mount(Router& r);
             void use(Middleware mw);
             void ws(const std::string& path, WsHandler handler);
+            void serveStatic(const std::string& prefix, const std::string& dir);
     };
 }
