@@ -6,5 +6,5 @@
 
 namespace ynet {
     using Next = std::function<void ()>;
-    using Middleware = std::function<void(const Request&, Response&, Next)>;
+    using Middleware = std::function<void(Request&, Response&, Next)>;
 };

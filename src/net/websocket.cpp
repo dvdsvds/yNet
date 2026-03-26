@@ -30,7 +30,6 @@ std::string WebSocket::handshake(const Request &req) {
 std::string WebSocket::readFrame() {
     char header[2];
     conn->read(header, 2);
-    // ssize_t r = conn->read(header, 2);
 
     uint8_t opcode = header[0] & 0x0F;
     bool masked = header[1] & 0x80;
@@ -93,16 +92,6 @@ void WebSocket::sendFrame(const std::string& data, uint8_t opcode) {
     conn->write(frame.c_str(), frame.size());
 }
 
-
-// void WebSocket::run() {
-//     on_open();
-//     while(1) {
-//         std::string payload = readFrame();
-//         if(payload.empty()) break;
-//         on_message(payload);
-//     }
-//     on_close();
-// }
 void WebSocket::run() {
     int epfd = epoll_create1(0);
     struct epoll_event ev;

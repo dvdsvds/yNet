@@ -12,7 +12,7 @@ namespace ynet {
     
     Middleware RateLimiter(int max_requests, int period_seconds) {
         auto buckets = std::make_shared<std::unordered_map<std::string, Bucket>>();
-        return [buckets, max_requests, period_seconds](const Request& req, Response& res, Next next) {
+        return [buckets, max_requests, period_seconds](Request& req, Response& res, Next next) {
             std::string ip = req.getClientIP();
             auto now = std::chrono::steady_clock::now();
             auto& bucket = (*buckets)[ip];

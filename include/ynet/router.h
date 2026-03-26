@@ -6,7 +6,7 @@
 #include <ynet/response.h>
 
 namespace ynet {
-    using Handler = std::function<void(const Request&, Response&)>;
+    using Handler = std::function<void(Request&, Response&)>;
     class Router {
         private:
             std::unordered_map<std::string, Handler> routes;

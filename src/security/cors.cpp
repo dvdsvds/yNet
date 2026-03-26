@@ -6,7 +6,7 @@
 
 namespace ynet {
     Middleware cors(std::vector<std::string> allowd_origins) {
-        return [allowd_origins](const Request& req, Response& res, Next next) {
+        return [allowd_origins](Request& req, Response& res, Next next) {
             auto origin = req.getHeader("Origin");
             if(allowd_origins.size() == 1 && allowd_origins[0] == "*") {
                 res.header("Access-Control-Allow-Origin", "*");

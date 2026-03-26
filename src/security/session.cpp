@@ -5,7 +5,7 @@
 
 namespace ynet {
     Middleware session() {
-        return [](const Request& req, Response& res, Next next) {
+        return [](Request& req, Response& res, Next next) {
             next();
             std::optional<std::string> isheader = res.getHeader("Set-Cookie");
             if(isheader.has_value()) {

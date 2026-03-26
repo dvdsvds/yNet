@@ -58,5 +58,12 @@ Request Request::parse(const char* raw, size_t len) {
     }
 
     req.body = data.substr(pos + 2);
+
+    auto ct = req.getHeader("Content-Type");
+    if(ct && ct->find("multipart/form-data") != std::string::npos) {
+        MultipartParser parser;
+        parser.parse(req.body.c_str(), req.body.size(), *ct);
+        req.parts_ = parser.getParts();
+    }
     return req;
 }
