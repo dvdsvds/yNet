@@ -35,6 +35,7 @@ static const std::unordered_map<int, std::string> status_msg = {
     {403, "Forbidden"},
     {404, "Not Found"},
     {405, "Method Not Allowed"},
+    {413, "Payload Too Large"},
     {429, "Too Many Requests"},
     {500, "Internal Server Error"},
     {503, "Service Unavailable"}

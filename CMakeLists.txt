@@ -10,7 +10,10 @@ find_package(OpenSSL REQUIRED)
 file(GLOB_RECURSE YNET_SOURCES src/*.cpp)
 
 add_library(ynet STATIC ${YNET_SOURCES})
-target_include_directories(ynet PUBLIC include)
+target_include_directories(ynet PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+)
 target_link_libraries(ynet PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 target_compile_options(ynet PRIVATE

@@ -27,6 +27,10 @@ namespace ynet {
                             break;
                         }
                     }
+                    if(token_val.empty()) {
+                        auto csrf = req.getFormParam("_csrf");
+                        if(csrf.has_value()) token_val = csrf.value();
+                    }
                 }
                 if(!token_val.empty() && csrfs.count(token_val)) {
                     next();

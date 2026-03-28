@@ -1,4 +1,6 @@
+#include <chrono>
 #include <exception>
+#include <openssl/ssl.h>
 #include <string>
 #include <ynet/server.h>
 #include <iostream>
@@ -73,8 +75,10 @@ void Server::start() {
                         if(content_length > config.max_upload_size) {
                             Response res;
                             res.status(413).body("Upload size exceeds limit");
+                            res.header("Content-Type", "text/plain");
                             res.header("Connection", "close");
                             res.send(*conn);
+                            if(conn->getSSL()) SSL_shutdown(conn->getSSL());
                             {
                                 std::lock_guard<std::mutex> lock(conn_mtx);
                                 connections.erase(fd);
