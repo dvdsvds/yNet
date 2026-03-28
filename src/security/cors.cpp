@@ -1,8 +1,8 @@
-#include "ynet/middleware.h"
-#include "ynet/request.h"
-#include "ynet/response.h"
 #include <algorithm>
-#include <ynet/security/cors.h>
+#include "ynet/core/middleware.h"
+#include "ynet/core/request.h"
+#include "ynet/core/response.h"
+#include "ynet/security/cors.h"
 
 namespace ynet {
     Middleware cors(std::vector<std::string> allowd_origins) {

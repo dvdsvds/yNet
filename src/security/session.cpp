@@ -1,11 +1,10 @@
-#include "ynet/middleware.h"
-#include "ynet/request.h"
-#include "ynet/response.h"
-#include <ynet/security/cors.h>
+#include "ynet/core/middleware.h"
+#include "ynet/core/request.h"
+#include "ynet/core/response.h"
 
 namespace ynet {
     Middleware session() {
-        return [](Request& req, Response& res, Next next) {
+        return [](Request&, Response& res, Next next) {
             next();
             std::optional<std::string> isheader = res.getHeader("Set-Cookie");
             if(isheader.has_value()) {

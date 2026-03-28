@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ynet/middleware.h"
+#include "ynet/core/middleware.h"
 namespace ynet {
     Middleware Sanitizer();
 }

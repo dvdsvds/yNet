@@ -1,6 +1,6 @@
-#include "ynet/server.h"
 #include <fstream>
-#include <ynet/router.h>
+#include "ynet/core/server.h"
+#include "ynet/core/router.h"
 
 using namespace ynet;
 

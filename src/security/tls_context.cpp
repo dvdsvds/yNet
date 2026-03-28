@@ -1,7 +1,6 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <stdexcept>
-#include <iostream>
 #include <ynet/security/tls_context.h>
 
 using namespace ynet;

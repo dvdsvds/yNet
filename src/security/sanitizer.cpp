@@ -1,7 +1,7 @@
-#include "ynet/middleware.h"
-#include "ynet/request.h"
-#include "ynet/response.h"
-#include <ynet/security/sanitizer.h>
+#include "ynet/core/middleware.h"
+#include "ynet/core/request.h"
+#include "ynet/core/response.h"
+#include "ynet/security/sanitizer.h"
 
 namespace ynet {
     Middleware Sanitizer() {

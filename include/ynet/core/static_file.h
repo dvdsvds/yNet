@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ynet/request.h"
-#include "ynet/response.h"
+#include "ynet/core/request.h"
+#include "ynet/core/response.h"
 #include <string>
 namespace ynet {
     class StaticFileServer {

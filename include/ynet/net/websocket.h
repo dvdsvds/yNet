@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ynet/net/connection.h"
-#include "ynet/request.h"
+#include "ynet/core/request.h"
 #include <functional>
 namespace ynet {
     class WebSocket {

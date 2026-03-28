@@ -1,7 +1,8 @@
 #pragma once
+
 #include <memory>
-#include <ynet/config.h>
-#include <ynet/net/connection.h>
+#include "ynet/core/config.h"
+#include "ynet/net/connection.h"
 
 namespace ynet {
     class TcpListener {

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "ynet/config.h"
+#include "ynet/core/config.h"
 #include "ynet/security/csrf.h"
 #include "ynet/security/rate_limiter.h"
 #include "ynet/security/sanitizer.h"
 #include "ynet/security/secure_headers.h"
 #include "ynet/util/config_parser.h"
-#include "ynet/router.h"
-#include "ynet/server.h"
+#include "ynet/core/router.h"
+#include "ynet/core/server.h"
 #include "ynet/security/cors.h"
 #include "ynet/util/logger.h"
 #include "ynet/security/session.h"

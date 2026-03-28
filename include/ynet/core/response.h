@@ -1,8 +1,8 @@
 #pragma once
 
 #include <optional>
-#include <ynet/request.h>
-#include <ynet/net/connection.h>
+#include "ynet/core/request.h"
+#include "ynet/net/connection.h"
 
 namespace ynet {
     class Response {
