@@ -1,8 +1,4 @@
 #include <cstddef>
-#include <fstream>
-#include <mutex>
-#include <sstream>
-#include <sys/stat.h>
 #include "ynet/util/template_engine.h"
 
 using namespace ynet;
@@ -68,36 +64,6 @@ bool TemplateEngine::isTruthy(const JsonValue& val) {
     }, val.data);
 }
 
-#include <iostream>
-std::string TemplateEngine::loadFile(const std::string& file_path) {
-    struct stat st;
-    if(stat(file_path.c_str(), &st) == -1) {
-        std::cout << "stat failed: " << file_path << std::endl;
-        return "";
-    }
-    if(stat(file_path.c_str(), &st) == -1) {
-        return "";
-    }
-    std::lock_guard<std::mutex> lock(ctx);
-
-    auto it = cacheMap.find(file_path);
-    if(it != cacheMap.end()) {
-        if(it->second.mtime == st.st_mtime) {
-            return it->second.content;
-        };
-    } 
-
-    std::ifstream file(file_path);
-    if(!file.is_open()) return "";
-
-    std::ostringstream ss;
-    ss << file.rdbuf();
-    std::string content = ss.str();
-
-    cacheMap[file_path] = {content, st.st_mtime};
-
-    return content;
-}
 
 std::string TemplateEngine::renderString(const std::string& tmpl, const JsonValue& vars) {
     size_t pos = 0;
@@ -149,7 +115,7 @@ std::string TemplateEngine::renderString(const std::string& tmpl, const JsonValu
                 pos = each_end + 9;
             } else if(key_name.starts_with("> ")) {
                 std::string file_name = trim(key_name.substr(2));
-                std::string file = loadFile(file_name);
+                std::string file = cache.loadFile(file_name);
                 result += renderString(file, vars);
                 pos = end + 2;
             } else {
@@ -166,10 +132,6 @@ std::string TemplateEngine::renderString(const std::string& tmpl, const JsonValu
 }
 
 std::string TemplateEngine::render(const std::string& file_path, const JsonValue& vars) {
-    return renderString(loadFile(file_path), vars);
+    return renderString(cache.loadFile(file_path), vars);
 }
 
-void TemplateEngine::clearCache() {
-    std::lock_guard<std::mutex> lock(ctx);
-    cacheMap.clear();
-}

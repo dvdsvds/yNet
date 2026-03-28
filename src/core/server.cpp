@@ -123,7 +123,7 @@ void Server::start() {
                         return ;
                     }
 
-                    auto handler = router.resolve(parseResult.getMethod(), parseResult.getPath());
+                    auto handler = router->resolve(parseResult.getMethod(), parseResult.getPath());
                     Response res;
 
                     std::function<void()> next = [&](){
@@ -177,26 +177,3 @@ void Server::start() {
     }
 }
 
-void Server::stop() {
-    tcp_listener.close();
-}
-
-void Server::mount(Router& r) {
-    router = r;
-}
-
-void Server::use(Middleware mw) {
-    middlewares.push_back(mw);
-}
-
-void Server::ws(const std::string& path, WsHandler handler) {
-    ws_routes[path] = handler;
-}
-
-void Server::serveStatic(const std::string& prefix, const std::string& dir) {
-    static_files.emplace_back(prefix, dir);
-}
-
-void Server::onError(int code, std::function<Response(const Request&)> handler) {
-    error_handlers[code] = handler;
-}

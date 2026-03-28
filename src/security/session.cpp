@@ -3,7 +3,7 @@
 #include "ynet/core/response.h"
 
 namespace ynet {
-    Middleware session() {
+    Middleware Session() {
         return [](Request&, Response& res, Next next) {
             next();
             std::optional<std::string> isheader = res.getHeader("Set-Cookie");

@@ -80,17 +80,3 @@ std::optional<Handler> Router::resolve(const std::string& method, const std::str
     }
     return std::nullopt;
 }
-
-std::string Router::loadFile(const std::string& filepath) {
-    auto current_mtime = fs::last_write_time(filepath);
-    auto it = file_cache.find(filepath);
-
-    if(it != file_cache.end() && it->second.mtime == current_mtime) {
-        return it->second.content;
-    }
-
-    std::ifstream file(filepath);
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    file_cache[filepath] = {content, current_mtime};
-    return content;
-}

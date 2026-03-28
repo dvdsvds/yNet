@@ -17,7 +17,7 @@ namespace ynet {
     class Server {
         private:
             Config config;
-            Router router;
+            Router* router = nullptr;
             TcpListener tcp_listener;
             std::vector<Middleware> middlewares;
             std::unique_ptr<TlsContext> tls_ctx;
@@ -36,11 +36,11 @@ namespace ynet {
                     }
                 }
             void start();
-            void stop();
-            void mount(Router& r);
-            void use(Middleware mw);
-            void ws(const std::string& path, WsHandler handler);
-            void serveStatic(const std::string& prefix, const std::string& dir);
-            void onError(int code, std::function<Response(const Request&)> handler);
+            void stop() { tcp_listener.close(); }
+            void mount(Router& r) { router = &r; }
+            void use(Middleware mw) { middlewares.push_back(mw); }
+            void ws(const std::string& path, WsHandler handler) { ws_routes[path] = handler; }
+            void serveStatic(const std::string& prefix, const std::string& dir) { static_files.emplace_back(prefix, dir); }
+            void onError(int code, std::function<Response(const Request&)> handler) { error_handlers[code] = handler; }
     };
 }

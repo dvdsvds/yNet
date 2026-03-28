@@ -1,12 +1,10 @@
 #pragma once
 
-#include <filesystem>
 #include <unordered_map>
 #include <functional>
 #include "ynet/core/request.h"
 #include "ynet/core/response.h"
-
-namespace fs = std::filesystem;
+#include "ynet/cache/cache.h"
 
 namespace ynet {
     using Handler = std::function<void(Request&, Response&)>;
@@ -38,16 +36,12 @@ namespace ynet {
             void file(const std::string& filepath);
     };
 
-    struct FileCache {
-        std::string content;
-        fs::file_time_type mtime;
-    };
-
     class Router {
         private:
+            Cache& cache;
             std::unordered_map<std::string, Handler> routes;
-            std::unordered_map<std::string, FileCache> file_cache;
         public:
+            Router(Cache& cache) : cache(cache) {}
             Route get(const std::string& path);
             Route post(const std::string& path);
             Route put(const std::string& path);
@@ -56,7 +50,7 @@ namespace ynet {
             void addRoute(const std::string& method, const std::string& path, Handler handler);
             
             std::optional<Handler> resolve(const std::string& method, const std::string& path) const;
-            std::string loadFile(const std::string& filepath);
+            std::string loadFile(const std::string& filepath) { return cache.loadFile(filepath); }
     };
 
 }
