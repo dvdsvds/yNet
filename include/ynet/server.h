@@ -27,6 +27,7 @@ namespace ynet {
             std::mutex conn_mtx;
             std::unordered_map<std::string, WsHandler> ws_routes;
             std::vector<StaticFileServer> static_files;
+            std::unordered_map<int, std::function<Response(const Request&)>> error_handlers;
         public:
             Server(const Config& config) :
                 config(config), tcp_listener(config), ev(config.max_connections), tp(std::thread::hardware_concurrency()) {
@@ -40,5 +41,6 @@ namespace ynet {
             void use(Middleware mw);
             void ws(const std::string& path, WsHandler handler);
             void serveStatic(const std::string& prefix, const std::string& dir);
+            void onError(int code, std::function<Response(const Request&)> handler);
     };
 }

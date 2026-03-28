@@ -20,6 +20,9 @@ namespace ynet {
             QueryMap query_params;
             std::vector<Part> parts_;
             std::string csrf_token;
+            std::unordered_map<std::string, std::string> form_data;
+            bool parse_error = false;
+            int error_code = 0;
         public:
             const std::string& getMethod() const { return method; }
             const std::string& getPath() const { return path; }
@@ -32,6 +35,9 @@ namespace ynet {
             const std::string& getBody() const { return body; }
             const std::vector<Part>& getParts() const { return parts_; }
             const std::string getCsrfToken() const { return csrf_token; }
+            std::optional<std::string> getFormParam(const std::string& key) const;
+            bool isParseError() { return parse_error; }
+            int getErrorCode() { return error_code; }
 
             void setClientIP(const std::string& ip) { client_ip = ip; }
             void setCsrfToken(const std::string& token) { csrf_token = token; }

@@ -14,6 +14,9 @@ namespace ynet {
             Response& status(int code);
             Response& header(const std::string& key, const std::string& value);
             Response& body(const std::string& body);
+            Response& json(const std::string& json_str);
+            Response& html(const std::string& html_str);
+            Response& redirect(const std::string& url, int code = 302);
 
             std::optional<std::string> getHeader(const std::string& key) const;
             std::string build();

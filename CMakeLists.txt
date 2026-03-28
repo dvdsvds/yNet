@@ -29,3 +29,8 @@ target_link_libraries(example ynet)
 
 add_executable(test_client examples/client.cpp)
 target_link_libraries(test_client ynet)
+
+install(DIRECTORY include/ynet DESTINATION include)
+
+install(TARGETS ynet EXPORT ynetTargets ARCHIVE DESTINATION lib)
+install(EXPORT ynetTargets NAMESPACE ynet:: DESTINATION lib/cmake/ynet)

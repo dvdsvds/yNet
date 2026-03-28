@@ -1,4 +1,6 @@
+#include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <ynet/util/file_saver.h>
 
 namespace ynet {
@@ -7,7 +9,23 @@ namespace ynet {
         size_t pos1 = filename.rfind('/');
         size_t pos2 = filename.rfind('\\');
         if(pos1 == std::string::npos && pos2 == std::string::npos) {
-            std::ofstream ofs(path + "/" + filename, std::ios::binary);
+            std::string fullpath = path + "/" + filename;
+            bool existsFile = std::filesystem::exists(fullpath);
+            int filecount = 0;
+            while(1) {
+                if(!existsFile) {
+                    break;
+                }
+                filecount++;
+                size_t dot = filename.rfind('.');
+                std::string name = filename.substr(0, dot);
+                std::string ext = filename.substr(dot + 1);
+
+                std::string new_filename = name + "_" + std::to_string(filecount) + "." + ext;
+                fullpath = path + "/" + new_filename;
+                existsFile = std::filesystem::exists(fullpath);
+            }
+            std::ofstream ofs(fullpath, std::ios::binary);
             if(!ofs.is_open()) {
                 return false;
             }

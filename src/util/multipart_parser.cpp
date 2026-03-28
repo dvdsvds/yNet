@@ -64,6 +64,9 @@ void MultipartParser::parsePart(const char* raw, size_t len) {
     part.data = it + 4;
     part.data_len = len - (part.data - raw);
 
+    if(!part.filename.empty() && part.data_len == 0) {
+        return;
+    } 
     parts_.push_back(part);
 }
 

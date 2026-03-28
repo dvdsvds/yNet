@@ -1,3 +1,4 @@
+#include <exception>
 #include <string>
 #include <ynet/server.h>
 #include <iostream>
@@ -69,6 +70,17 @@ void Server::start() {
                             size_t cl_end = raw.find("\r\n", cl_pos);
                             content_length = std::stoul(raw.substr(cl_pos + 16, cl_end - cl_pos - 16));
                         }
+                        if(content_length > config.max_upload_size) {
+                            Response res;
+                            res.status(413).body("Upload size exceeds limit");
+                            res.header("Connection", "close");
+                            res.send(*conn);
+                            {
+                                std::lock_guard<std::mutex> lock(conn_mtx);
+                                connections.erase(fd);
+                            }
+                            return;
+                        }
                         while(raw.size() - body_start < content_length) {
                             ssize_t n = conn->read(buf, sizeof(buf));
                             if(n <= 0) break;
@@ -79,11 +91,22 @@ void Server::start() {
                     if(raw.empty()) {
                         std::lock_guard<std::mutex> lock(conn_mtx);
                         connections.erase(fd);
-                        return ;
+                        return;
                     };
 
                     auto parseResult = Request::parse(raw.c_str(), raw.size());
                     parseResult.setClientIP(conn->getClientIP());
+                    if(parseResult.isParseError()) {
+                        Response res;
+                        res.status(400).body("Bad Request");
+                        res.header("Connection", "close");
+                        res.send(*conn);
+                        {
+                            std::lock_guard<std::mutex> lock(conn_mtx);
+                            connections.erase(fd);
+                        }
+                        return;
+                    }
                     if(WebSocket::isUpgrade(parseResult)) {
                         auto it = ws_routes.find(parseResult.getPath());
                         if(it != ws_routes.end()) {
@@ -111,7 +134,13 @@ void Server::start() {
                                     break;
                                 }
                             }
-                            if(!served) res.status(404).body("Not Found");
+                            if(!served) {
+                                if(error_handlers.find(404) != error_handlers.end()) {
+                                    res = error_handlers[404](parseResult);
+                                } else {
+                                    res.status(404).body("Not Found");
+                                }
+                            }
                         }
                     };
 
@@ -121,7 +150,15 @@ void Server::start() {
                         };
                     }
 
-                    next();
+                    try {
+                        next();
+                    } catch(std::exception& error) {
+                        if(error_handlers.find(500) != error_handlers.end()) {
+                            res = error_handlers[500](parseResult);
+                        } else {
+                            res.status(500).body("Internal Server Error");
+                        }
+                    }
                     res.send(*conn);
 
                     auto conn_header = parseResult.getHeader("Connection");
@@ -155,4 +192,8 @@ void Server::ws(const std::string& path, WsHandler handler) {
 
 void Server::serveStatic(const std::string& prefix, const std::string& dir) {
     static_files.emplace_back(prefix, dir);
+}
+
+void Server::onError(int code, std::function<Response(const Request&)> handler) {
+    error_handlers[code] = handler;
 }

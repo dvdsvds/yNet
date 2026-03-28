@@ -1,6 +1,6 @@
 # yNet
 
-C++로 만든 경량 HTTP/HTTPS 프레임워크
+C++ 기반 풀스택 웹 프레임워크
 
 **[English](docs/README_en.md)**
 
@@ -82,5 +82,4 @@ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -node
 
 ## 라이선스
 
-BSL-1.0 (Boost Software License)
-
+MIT LISENCE

@@ -1,3 +1,4 @@
+#include "ynet/util/url.h"
 #include <ynet/request.h>
 
 using namespace ynet;
@@ -13,6 +14,14 @@ std::optional<std::string> Request::getHeader(const std::string& key) const {
 std::optional<std::string> Request::getQueryParam(const std::string& key) const {
     auto it = query_params.find(key);
     if(it != query_params.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> Request::getFormParam(const std::string& key) const {
+    auto it = form_data.find(key);
+    if(it != form_data.end()) {
         return it->second;
     }
     return std::nullopt;
@@ -60,10 +69,33 @@ Request Request::parse(const char* raw, size_t len) {
     req.body = data.substr(pos + 2);
 
     auto ct = req.getHeader("Content-Type");
+    MultipartParser parser;
     if(ct && ct->find("multipart/form-data") != std::string::npos) {
-        MultipartParser parser;
-        parser.parse(req.body.c_str(), req.body.size(), *ct);
-        req.parts_ = parser.getParts();
+        if(ct->find("boundary=") == std::string::npos) {
+            req.parse_error = true;
+            req.error_code = 400;
+        } else {
+            parser.parse(req.body.c_str(), req.body.size(), *ct);
+            req.parts_ = parser.getParts();
+            for(const auto& part : req.parts_) {
+                if(part.filename.empty()) {
+                    req.form_data[part.name] = std::string(part.data, part.data_len);
+                }
+            }
+        }
+    } else if(ct && ct->find("application/x-www-form-urlencoded") != std::string::npos) {
+        size_t start = 0;
+        size_t amp = req.body.find('&');
+        while(amp != std::string::npos) {
+            std::string param = req.body.substr(start, amp - start);
+            size_t eq = param.find('=');
+            req.form_data[urlDecode(param.substr(0, eq))] = urlDecode(param.substr(eq + 1));
+            start = amp + 1;
+            amp = req.body.find('&', start);
+        }
+        std::string param = req.body.substr(start);
+        size_t eq = param.find('=');
+        req.form_data[urlDecode(param.substr(0, eq))] = urlDecode(param.substr(eq + 1));
     }
     return req;
 }

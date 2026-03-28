@@ -15,5 +15,6 @@ namespace ynet {
         bool use_tls = false;
         std::string cert_path;
         std::string key_path;
+        size_t max_upload_size = 10 * 1024 * 1024;
     };
 }

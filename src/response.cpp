@@ -61,3 +61,17 @@ void Response::send(Connection& conn) {
     conn.write(data.c_str(), data.size());
 }
 
+Response& Response::json(const std::string& json_str) {
+    status(200).header("Content-Type", "application/json").body(json_str);
+    return *this;
+}
+
+Response& Response::html(const std::string& html_str) {
+    status(200).header("Content-Type", "text/html;charset=utf-8").body(html_str);
+    return *this;
+}
+
+Response& Response::redirect(const std::string& url, int code) {
+    status(code).header("Location", url);
+    return *this;
+}
