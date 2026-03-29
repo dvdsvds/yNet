@@ -10,20 +10,6 @@ std::string TemplateEngine::trim(const std::string& str) {
     return str.substr(first, last - first + 1);
 }
 
-std::string TemplateEngine::jsonValueToString(const JsonValue& val) {
-    return std::visit([](auto& v) -> std::string {
-        using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, std::nullptr_t>) return "";
-        else if constexpr (std::is_same_v<T, bool>) return v ? "true" : "false";
-        else if constexpr (std::is_same_v<T, int64_t>) return std::to_string(v);
-        else if constexpr (std::is_same_v<T, double>) return std::to_string(v);
-        else if constexpr (std::is_same_v<T, std::string>) return v;
-        else if constexpr (std::is_same_v<T, std::vector<JsonValue>>) return "";
-        else if constexpr (std::is_same_v<T, std::map<std::string, JsonValue>>) return "";
-    }, val.data);
-}
-
-
 std::string TemplateEngine::htmlEscape(const std::string& str) {
     std::string result;
     for(const char& c : str) {
@@ -80,7 +66,7 @@ std::string TemplateEngine::renderString(const std::string& tmpl, const JsonValu
             auto& obj = std::get<Object>(vars.data);
             auto var = obj.find(trim(key_name));
             if(var != obj.end()) {
-                result += jsonValueToString(var->second);
+                result += toText(var->second);
             }
             pos = end + 3;
         } else {
@@ -121,7 +107,7 @@ std::string TemplateEngine::renderString(const std::string& tmpl, const JsonValu
             } else {
                 auto var = obj.find(trim(key_name));
                 if(var != obj.end()) {
-                    result += htmlEscape(jsonValueToString(var->second));
+                    result += htmlEscape(toText(var->second));
                 }
                 pos = end + 2;
             }

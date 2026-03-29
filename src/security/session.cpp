@@ -4,7 +4,6 @@
 #include "ynet/core/response.h"
 #include "ynet/util/crypto.h"
 #include <ctime>
-#include <iostream>
 #include <mutex>
 
 namespace ynet {
@@ -19,20 +18,18 @@ namespace ynet {
         return std::nullopt;
     }
 
-    static const int SESSION_TTL = 3600;
-    void create_session(Request& req, Response& res) {
+    void create_session(Request& req, Response& res, int ttl, const std::string& cookie_name) {
         std::string id = random_hex(32);
         SessionData sd;
-        sd.expires_at = std::time(nullptr) + SESSION_TTL;
+        sd.expires_at = std::time(nullptr) + ttl;
         sd.id = id;
         storage[id] = sd;
         req.session = sd;
-        res.header("Set-Cookie", "session_id=" + id);
+        res.header("Set-Cookie", cookie_name + "=" + id);
     }
 
-    Middleware Session() {
-        return [](Request& req, Response& res, Next next) {
-            std::cerr << "session middleware start" << std::endl;
+    Middleware Session(int ttl, const std::string& cookie_name, const std::string& cookie_flags) {
+        return [ttl, cookie_name, cookie_flags](Request& req, Response& res, Next next) {
             std::optional<std::string> cookie_header = req.getHeader("Cookie");
             std::optional<std::string> session_id;
             std::string token;
@@ -50,7 +47,7 @@ namespace ynet {
                     std::string key = token.substr(0, eq);
                     std::string value = token.substr(eq + 1);
                     key.erase(0, key.find_first_not_of(' '));
-                    if(key == "session_id") {
+                    if(key == cookie_name) {
                         session_id = value;
                         break;
                     }
@@ -62,19 +59,19 @@ namespace ynet {
                 std::lock_guard<std::mutex> lock(mutex);
                 auto it = storage.find(session_id.value());
                 if(it == storage.end()) {
-                    create_session(req, res);
+                    create_session(req, res, ttl, cookie_name);
                 } else {
                     if(it->second.expires_at <= std::time(nullptr)) {
                         storage.erase(it);
-                        create_session(req, res);
+                        create_session(req, res, ttl, cookie_name);
                     } else {
-                        it->second.expires_at = std::time(nullptr) + SESSION_TTL;
+                        it->second.expires_at = std::time(nullptr) + ttl;
                         req.session = it->second;
                     }
                 }
             } else {
                 std::lock_guard<std::mutex> lock(mutex);
-                create_session(req, res);
+                create_session(req, res, ttl, cookie_name);
             }
 
 
@@ -85,7 +82,7 @@ namespace ynet {
             }
             std::optional<std::string> isheader = res.getHeader("Set-Cookie");
             if(isheader.has_value()) {
-                res.header("Set-Cookie", isheader.value() + "; HttpOnly; Secure; SameSite=Strict");
+                res.header("Set-Cookie", isheader.value() + "; " + cookie_flags);
             }
         };
     }

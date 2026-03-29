@@ -11,6 +11,7 @@ namespace ynet {
             HeaderMap headers_;
             std::string body_;
         public:
+            static Response error(int code, const std::string& msg = "");
             Response& status(int code);
             Response& header(const std::string& key, const std::string& value);
             Response& body(const std::string& body);

@@ -23,4 +23,5 @@ namespace ynet {
 
     JsonValue parse(const std::string& json);
     std::string stringify(const JsonValue& val);
+    std::string toText(const JsonValue& val);
 }

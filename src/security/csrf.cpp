@@ -5,13 +5,12 @@
 #include "ynet/security/csrf.h"
 
 namespace ynet {
-    std::unordered_map<std::string, std::string> csrfs;
     Middleware Csrf() {
         return [](Request& req, Response& res, Next next) {
-            const std::string method = req.getMethod();            
+            const std::string method = req.getMethod();
             if(method == "GET") {
                 std::string token = random_hex(32);
-                csrfs[token] = token;
+                req.session.set("_csrf", token);
                 res.header("X-CSRF-Token", token);
                 req.setCsrfToken(token);
                 next();
@@ -32,7 +31,8 @@ namespace ynet {
                         if(csrf.has_value()) token_val = csrf.value();
                     }
                 }
-                if(!token_val.empty() && csrfs.count(token_val)) {
+                auto stored = req.session.get("_csrf");
+                if(!token_val.empty() && stored.has_value() && stored.value() == token_val) {
                     next();
                 } else {
                     res.status(403).body("Forbidden");

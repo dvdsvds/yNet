@@ -28,6 +28,8 @@ namespace ynet {
             std::unordered_map<std::string, WsHandler> ws_routes;
             std::vector<StaticFileServer> static_files;
             std::unordered_map<int, std::function<Response(const Request&)>> error_handlers;
+            void handleRequest(int fd, Connection& conn);
+            void handleWebSocket(Connection& conn, Request& req);
         public:
             Server(const Config& config) :
                 config(config), tcp_listener(config), ev(config.max_connections), tp(std::thread::hardware_concurrency()) {

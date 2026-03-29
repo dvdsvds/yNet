@@ -129,4 +129,16 @@ namespace ynet {
         }, val.data);
     }
 
+    std::string toText(const JsonValue &val) {
+        return std::visit([](auto& v) -> std::string {
+            using T = std::decay_t<decltype(v)>;
+            if constexpr (std::is_same_v<T, std::nullptr_t>) return "";
+            else if constexpr (std::is_same_v<T, bool>) return v ? "true" : "false";
+            else if constexpr (std::is_same_v<T, int64_t>) return std::to_string(v);
+            else if constexpr (std::is_same_v<T, double>) return std::to_string(v);
+            else if constexpr (std::is_same_v<T, std::string>) return v;
+            else if constexpr (std::is_same_v<T, std::vector<JsonValue>>) return "";
+            else if constexpr (std::is_same_v<T, std::map<std::string, JsonValue>>) return "";
+        }, val.data);
+    }
 }

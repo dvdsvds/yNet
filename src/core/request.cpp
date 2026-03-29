@@ -40,19 +40,7 @@ Request Request::parse(const char* raw, size_t len) {
     if(qpos != std::string::npos) {
         std::string query_string = req.path.substr(qpos + 1);
         req.path = req.path.substr(0, qpos);
-
-        size_t start = 0;
-        size_t amp = query_string.find('&');
-        while(amp != std::string::npos) {
-            std::string param = query_string.substr(start, amp - start);
-            size_t eq = param.find('=');
-            req.query_params[param.substr(0, eq)] = param.substr(eq + 1);
-            start = amp + 1;
-            amp = query_string.find('&', start);
-        }
-        std::string param = query_string.substr(start);
-        size_t eq = param.find('=');
-        req.query_params[param.substr(0, eq)] = param.substr(eq + 1);
+        req.query_params = parseQuery(query_string);
     } 
     req.version = data.substr(sp2 + 1, line_end - sp2 - 1);
 
@@ -84,18 +72,7 @@ Request Request::parse(const char* raw, size_t len) {
             }
         }
     } else if(ct && ct->find("application/x-www-form-urlencoded") != std::string::npos) {
-        size_t start = 0;
-        size_t amp = req.body.find('&');
-        while(amp != std::string::npos) {
-            std::string param = req.body.substr(start, amp - start);
-            size_t eq = param.find('=');
-            req.form_data[urlDecode(param.substr(0, eq))] = urlDecode(param.substr(eq + 1));
-            start = amp + 1;
-            amp = req.body.find('&', start);
-        }
-        std::string param = req.body.substr(start);
-        size_t eq = param.find('=');
-        req.form_data[urlDecode(param.substr(0, eq))] = urlDecode(param.substr(eq + 1));
+        req.form_data = parseQuery(req.body);
     }
     return req;
 }

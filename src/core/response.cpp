@@ -41,6 +41,16 @@ static const std::unordered_map<int, std::string> status_msg = {
     {503, "Service Unavailable"}
 };
 
+Response Response::error(int code, const std::string& msg) {
+    Response res;
+    auto it = status_msg.find(code);
+    std::string body = msg.empty() ? (it != status_msg.end() ? it->second : "Unknown Error") : msg;
+    res.status(code).body(body);
+    res.header("Content-Type", "text/plain");
+    res.header("Connection", "close");
+    return res;
+}
+
 std::string Response::build() {
     std::string result;
     headers_["Content-Length"] = std::to_string(body_.size());
