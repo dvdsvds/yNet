@@ -27,7 +27,7 @@ target_link_options(ynet PRIVATE
     -Wl,-z,relro,-z,now
 )
 
-if(CMAKE_SOURCE_DIR STREQUAR CMAKE_CURRENT_SOURCE_DIR)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_executable(example examples/main.cpp)
     target_link_libraries(example ynet)
 
