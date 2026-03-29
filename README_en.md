@@ -55,7 +55,65 @@ JSON parser/serializer, URL encoding/decoding/query string parsing, MIME type ma
 
 ---
 
-## Build & Run
+## Quick Start
+
+### Install CLI
+
+```bash
+git clone https://github.com/dvdsvds/yNet.git
+cd yNet
+./install.sh
+```
+
+### Create a Project
+
+```bash
+ynet new myapp
+cd myapp
+ynet build
+ynet run
+```
+
+Visit `http://localhost:8080` to see the default page.
+
+### CLI Commands
+
+```bash
+ynet new <project-name>   # Create a new project
+ynet build                # Build
+ynet run                  # Run
+ynet clean                # Clean build files
+ynet help                 # Show help
+```
+
+### Generated Project Structure
+
+```
+myapp/
+├── CMakeLists.txt        # Auto-downloads yNet via FetchContent
+├── src/
+│   └── main.cpp          # Default handlers included
+├── static/
+└── templates/
+```
+
+### Requirements
+
+- Linux (epoll-based)
+- C++20
+- CMake 3.20+
+- OpenSSL
+
+### For HTTPS
+
+Set `tls=on` in the config file, then generate certificates:
+
+```bash
+cd build/config
+openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes
+```
+
+### Manual Build (without CLI)
 
 ```bash
 git clone https://github.com/dvdsvds/yNet.git
@@ -66,21 +124,9 @@ make
 ./example
 ```
 
-### Requirements
-
-- C++20
-- CMake 3.20+
-- OpenSSL
-
-### For HTTPS
-
-```bash
-openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes
-```
-
 ---
 
-## Quick Start
+## Example
 
 ```cpp
 #include <ynet/app.h>
@@ -91,9 +137,11 @@ int main() {
     app.get("/").html("<h1>Hello yNet!</h1>");
 
     app.get("/api/hello").handle([](ynet::Request& req, ynet::Response& res) {
-        res.json(R"({"message": "hello"})");
+        auto name = req.getQueryParam("name");
+        res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
     });
 
+    app.cors("*");
     app.session();
     app.listen();
 }
