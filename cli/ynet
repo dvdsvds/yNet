@@ -94,12 +94,9 @@ cmd_build() {
     fi
 
     mkdir -p build
-    cd build
-    cmake .. && make -j$(nproc)
-    local result=$?
-    cd ..
+    cmake -S . -B build && make -C build -j$(nproc)
 
-    if [ $result -eq 0 ]; then
+    if [ $? -eq 0 ]; then
         echo ""
         echo "Build successful!"
     fi
