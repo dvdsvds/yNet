@@ -8,7 +8,7 @@ A full-stack HTTP/HTTPS web framework built with C++20
 
 ## Introduction
 
-yNet is a C++20-based HTTP/HTTPS web framework. It provides routing, middleware, security, file uploads, WebSocket, and a template engine — everything you need for a web server.
+yNet is an HTTP/HTTPS web framework built with C++20. It provides routing, middleware, security, file uploads, WebSocket, template engine, and caching — everything you need for a web server.
 
 ## Tech Stack
 
@@ -30,16 +30,25 @@ epoll event loop, thread pool
 Handshake, frame send/receive, onOpen/onMessage/onClose callbacks
 
 ### Security
-HTTPS (TLS), CORS, CSRF token validation, session management, rate limiter, input sanitizer, automatic secure headers
+HTTPS (TLS), CORS, CSRF token validation, session management (auto-generation, expiration, sliding expiration), rate limiter, input sanitizer, automatic security headers
+
+### Session
+Cookie-based session management, automatic session ID generation (`Set-Cookie`), expiration with sliding expiration, `req.session.get()`/`set()` for session data storage/retrieval, automatic security flags (HttpOnly, Secure, SameSite)
+
+### Cache
+File cache (mtime-based refresh), swappable eviction policy via abstract `CachePolicy` class, built-in LRU policy, configurable max cache size
 
 ### File Upload
-multipart/form-data parsing, file saving (path traversal prevention), upload size limit (413 response), filename collision prevention (auto-incrementing numbers)
+multipart/form-data parsing, file saving (path traversal prevention), upload size limit (413 response), filename collision prevention (auto-incrementing)
 
 ### Template Engine
-Variable substitution `{{var}}`, HTML auto-escaping, raw output `{{{var}}}`, conditionals `{{#if}}`, loops `{{#each}}`, file include `{{> partial}}`, file change detection caching
+Variable substitution `{{var}}`, automatic HTML escaping, raw output `{{{var}}}`, conditionals `{{#if}}`, loops `{{#each}}`, file includes `{{> partial}}`, file change detection caching
 
 ### Static File Serving
 Directory-based static file serving, directory traversal prevention
+
+### Configuration
+Auto-generated `.conf` file with `ConfigParser`, supports port/TLS/body size/cache settings
 
 ### Utilities
 JSON parser/serializer, URL encoding/decoding/query string parsing, MIME type mapping, TCP client, request logger, SHA-256 hashing
@@ -71,67 +80,86 @@ openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -node
 
 ---
 
+## Quick Start
+
+```cpp
+#include <ynet/app.h>
+
+int main() {
+    ynet::App app;
+
+    app.get("/").html("<h1>Hello yNet!</h1>");
+
+    app.get("/api/hello").handle([](ynet::Request& req, ynet::Response& res) {
+        res.json(R"({"message": "hello"})");
+    });
+
+    app.session();
+    app.listen();
+}
+```
+
+---
+
 ## API Reference
 
-### Config
+### App
 
-Server configuration struct.
-
-```cpp
-ynet::Config config;
-config.port = 8080;
-config.use_tls = true;
-config.cert_path = "cert.pem";
-config.key_path = "key.pem";
-config.max_upload_size = 10 * 1024 * 1024; // 10MB
-```
-
-### Server
+`App` is the entry point of yNet. It provides routing, middleware, and server configuration through a single interface.
 
 ```cpp
-ynet::Server server(config);
+ynet::App app;
 
-// Mount router
-server.mount(router);
+// Routing
+app.get("/path").html("<h1>Hello</h1>");
+app.get("/path").json(R"({"ok": true})");
+app.get("/path").file("static/page.html");
+app.get("/path").handle([](ynet::Request& req, ynet::Response& res) { ... });
+app.post("/path").handle(handler);
+app.put("/path").handle(handler);
+app.del("/path").handle(handler);
 
-// Register middleware
-server.use(ynet::Logger());
+// Middleware
+app.cors("*");
+app.logger();
+app.csrf();
+app.sanitizer();
+app.secureHeaders();
+app.session();
+app.rateLimit(100, 60);
 
-// Static file serving
-server.serveStatic("/static", "./public");
+// Static files
+app.serveStatic("/static", "./public");
 
-// WebSocket route
-server.ws("/ws", [](ynet::WebSocket& ws) { ... });
+// WebSocket
+app.ws("/ws", wsHandler);
 
-// Custom error handlers
-server.onError(404, [](const ynet::Request& req) {
-    ynet::Response res;
-    res.status(404).html("<h1>404 Not Found</h1>");
-    return res;
-});
-
-server.onError(500, [](const ynet::Request& req) {
-    ynet::Response res;
-    res.status(500).html("<h1>500 Internal Server Error</h1>");
-    return res;
-});
+// Error handlers
+app.onError(404).html("<h1>404 Not Found</h1>");
+app.onError(500).html("<h1>500 Internal Server Error</h1>");
 
 // Start server
-server.start();
+app.listen();
 ```
 
-### Router
+### Config File
 
-```cpp
-ynet::Router router;
+A config file is auto-generated at `config/project_name.conf` on first run.
 
-router.get("/path", [](ynet::Request& req, ynet::Response& res) {
-    res.status(200).body("Hello");
-});
-
-router.post("/path", [](ynet::Request& req, ynet::Response& res) {
-    res.status(200).body("Created");
-});
+```
+port=8080
+bind=0.0.0.0
+tls=on
+cert=cert.pem
+key=key.pem
+max_body=1MB
+max_upload=10MB
+max_header=8KB
+max_headers=64
+header_timeout=5000
+body_timeout=10000
+max_connections=1024
+max_cache=1024
 ```
 
 ### Request
@@ -163,6 +191,10 @@ req.getClientIP();
 // CSRF token
 req.getCsrfToken();
 
+// Session data
+req.session.set("key", "value");
+req.session.get("key");         // std::optional<std::string>
+
 // Parse error check
 req.isParseError();             // bool
 req.getErrorCode();             // int (400, etc.)
@@ -174,26 +206,78 @@ req.getErrorCode();             // int (400, etc.)
 // Basic usage
 res.status(200).header("Key", "Value").body("content");
 
-// Shortcut methods
+// Shorthand methods
 res.json("{\"status\":\"ok\"}");    // Content-Type: application/json + 200
 res.html("<h1>Hello</h1>");         // Content-Type: text/html; charset=utf-8 + 200
 res.redirect("/new-path");          // 302 redirect
 res.redirect("/new-path", 301);     // 301 redirect
 ```
 
+### Session
+
+Register the session middleware for automatic session management.
+
+```cpp
+app.session();
+
+app.get("/profile").handle([](ynet::Request& req, ynet::Response& res) {
+    // Store data in session
+    req.session.set("user_id", "123");
+
+    // Retrieve data from session
+    auto user = req.session.get("user_id");
+    if(user.has_value()) {
+        res.json(R"({"user": ")" + user.value() + R"("})");
+    } else {
+        res.status(401).json(R"({"error": "not logged in"})");
+    }
+});
+```
+
+How it works:
+- Automatically generates a session ID on first request + `Set-Cookie` response
+- Restores session from Cookie's session ID on subsequent requests
+- Automatic security flags: `HttpOnly`, `Secure`, `SameSite=Strict`
+- Default TTL of 1 hour, refreshed on each request (sliding expiration)
+- Invalid or expired sessions are automatically replaced with new ones
+
+### Cache
+
+Built-in LRU cache is applied by default. The eviction policy is swappable.
+
+```cpp
+// Default (LRU)
+ynet::Cache cache(1024);
+
+// Custom policy
+class MyPolicy : public ynet::CachePolicy {
+public:
+    void evict(std::unordered_map<std::string, ynet::CacheEntry>& entries) override {
+        // Custom eviction logic
+    }
+};
+
+ynet::Cache cache(1024, std::make_unique<MyPolicy>());
+```
+
+Set the max cache size in the config file:
+```
+max_cache=2048
+```
+
 ### Middleware
 
 ```cpp
 // Built-in middleware
-server.use(ynet::SecureHeaders());
-server.use(ynet::Sanitizer());
-server.use(ynet::RateLimiter(100, 60));  // 100 requests per 60 seconds
-server.use(ynet::Logger());
-server.use(ynet::cors({"*"}));
-server.use(ynet::Csrf());
-server.use(ynet::session());
+app.cors("*");                  // CORS
+app.logger();                   // Request logger
+app.csrf();                     // CSRF token validation
+app.sanitizer();                // Input sanitizer
+app.secureHeaders();            // Security headers
+app.session();                  // Session management
+app.rateLimit(100, 60);         // 100 requests per 60 seconds
 
-// Custom middleware
+// Custom middleware (when using Server directly)
 server.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
     // Pre-processing
     next();
@@ -204,8 +288,7 @@ server.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
 ### File Upload
 
 ```cpp
-// Upload form (with CSRF token)
-router.get("/upload", [](ynet::Request& req, ynet::Response& res) {
+app.get("/upload").handle([](ynet::Request& req, ynet::Response& res) {
     std::string token = req.getCsrfToken();
     std::string html = R"(
         <form action="/upload" method="POST" enctype="multipart/form-data">
@@ -217,8 +300,7 @@ router.get("/upload", [](ynet::Request& req, ynet::Response& res) {
     res.html(html);
 });
 
-// Upload handler
-router.post("/upload", [](ynet::Request& req, ynet::Response& res) {
+app.post("/upload").handle([](ynet::Request& req, ynet::Response& res) {
     for(const auto& part : req.getParts()) {
         if(!part.filename.empty()) {
             ynet::saveFile(part, "./uploads");
@@ -231,12 +313,12 @@ router.post("/upload", [](ynet::Request& req, ynet::Response& res) {
 ### WebSocket
 
 ```cpp
-server.ws("/ws", [](ynet::WebSocket& ws) {
+app.ws("/ws", [](ynet::WebSocket& ws) {
     ws.onOpen([]() {
         std::cout << "connected" << std::endl;
     });
     ws.onMessage([&ws](const std::string& msg) {
-        ws.sendFrame(msg, 0x1);  // Echo text frame
+        ws.sendFrame("echo: " + msg, 0x1);  // Echo text frame
     });
     ws.onClose([]() {
         std::cout << "disconnected" << std::endl;
@@ -266,9 +348,9 @@ Template syntax:
 - `{{#each items}}...{{/each}}` — Loop rendering
 - `{{> partial}}` — File include
 
-### Using with FetchContent
+### FetchContent
 
-You can use yNet in your project via FetchContent.
+You can use yNet in external projects via CMake FetchContent.
 
 ```cmake
 include(FetchContent)
@@ -295,13 +377,20 @@ target_link_libraries(your_app ynet::ynet)
 
 ```
 include/ynet/
-├── config.h
-├── middleware.h
-├── request.h
-├── response.h
-├── router.h
-├── server.h
-├── static_file.h
+├── app.h
+├── cache/
+│   ├── cache.h
+│   ├── cache_entry.h
+│   ├── cache_policy.h
+│   └── lru_policy.h
+├── core/
+│   ├── config.h
+│   ├── middleware.h
+│   ├── request.h
+│   ├── response.h
+│   ├── router.h
+│   ├── server.h
+│   └── static_file.h
 ├── net/
 │   ├── connection.h
 │   ├── event_loop.h
@@ -316,8 +405,10 @@ include/ynet/
 │   ├── sanitizer.h
 │   ├── secure_headers.h
 │   ├── session.h
+│   ├── session_data.h
 │   └── tls_context.h
 └── util/
+    ├── config_parser.h
     ├── crypto.h
     ├── file_saver.h
     ├── json.h
@@ -326,6 +417,43 @@ include/ynet/
     ├── multipart_parser.h
     ├── template_engine.h
     └── url.h
+
+src/
+├── app.cpp
+├── cache/
+│   ├── cache.cpp
+│   └── lru_policy.cpp
+├── core/
+│   ├── request.cpp
+│   ├── response.cpp
+│   ├── router.cpp
+│   ├── server.cpp
+│   └── static_file.cpp
+├── net/
+│   ├── connection.cpp
+│   ├── event_loop.cpp
+│   ├── tcp_client.cpp
+│   ├── tcp_listener.cpp
+│   ├── thread_pool.cpp
+│   └── websocket.cpp
+├── security/
+│   ├── cors.cpp
+│   ├── csrf.cpp
+│   ├── rate_limiter.cpp
+│   ├── sanitizer.cpp
+│   ├── secure_headers.cpp
+│   ├── session.cpp
+│   └── tls_context.cpp
+└── util/
+    ├── config_parser.cpp
+    ├── crypto.cpp
+    ├── file_saver.cpp
+    ├── json.cpp
+    ├── logger.cpp
+    ├── mime.cpp
+    ├── multipart_parser.cpp
+    ├── template_engine.cpp
+    └── url.cpp
 ```
 
 ## License
