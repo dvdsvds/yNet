@@ -118,9 +118,8 @@ cmd_run() {
         cmd_build
     fi
 
-    cd build
     echo "Starting $name..."
-    ./"$name"
+    ./build/"$name"
 }
 
 cmd_clean() {
