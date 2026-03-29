@@ -1,0 +1,142 @@
+#!/bin/bash
+
+YNET_VERSION="0.1.0"
+
+usage() {
+    echo "yNet CLI v${YNET_VERSION}"
+    echo ""
+    echo "Usage:"
+    echo "  ynet new <project-name>   Create a new yNet project"
+    echo "  ynet build                Build the project"
+    echo "  ynet run                  Run the project"
+    echo "  ynet clean                Clean build files"
+    echo "  ynet help                 Show this help"
+}
+
+cmd_new() {
+    local name="$1"
+    if [ -z "$name" ]; then
+        echo "Error: project name required"
+        echo "Usage: ynet new <project-name>"
+        exit 1
+    fi
+
+    if [ -d "$name" ]; then
+        echo "Error: directory '$name' already exists"
+        exit 1
+    fi
+
+    echo "Creating project '$name'..."
+
+    mkdir -p "$name/src"
+    mkdir -p "$name/static"
+    mkdir -p "$name/templates"
+
+    cat > "$name/CMakeLists.txt" << CMAKEOF
+cmake_minimum_required(VERSION 3.20)
+project(${name} LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+include(FetchContent)
+FetchContent_Declare(
+    ynet
+    GIT_REPOSITORY https://github.com/dvdsvds/yNet.git
+    GIT_TAG main
+)
+FetchContent_MakeAvailable(ynet)
+
+file(GLOB_RECURSE SOURCES src/*.cpp)
+add_executable(${name} \${SOURCES})
+target_link_libraries(${name} ynet)
+CMAKEOF
+
+    cat > "$name/src/main.cpp" << 'CPPEOF'
+#include <ynet/app.h>
+
+int main() {
+    ynet::App app;
+
+    app.get("/").handle([](ynet::Request& req, ynet::Response& res) {
+        res.html("<h1>Welcome to yNet!</h1>");
+    });
+
+    app.get("/hello").handle([](ynet::Request& req, ynet::Response& res) {
+        auto name = req.getQueryParam("name");
+        res.html("<h1>Hello, " + name.value_or("World") + "!</h1>");
+    });
+
+    app.listen();
+    return 0;
+}
+CPPEOF
+
+    cat > "$name/.gitignore" << 'GITEOF'
+build/
+compile_commands.json
+GITEOF
+
+    echo ""
+    echo "  Project '$name' created!"
+    echo ""
+    echo "  cd $name"
+    echo "  ynet build"
+    echo "  ynet run"
+    echo ""
+}
+
+cmd_build() {
+    if [ ! -f "CMakeLists.txt" ]; then
+        echo "Error: not a yNet project (CMakeLists.txt not found)"
+        exit 1
+    fi
+
+    mkdir -p build
+    cd build
+    cmake .. && make -j$(nproc)
+    cd ..
+
+    if [ $? -eq 0 ]; then
+        echo ""
+        echo "Build successful!"
+    fi
+}
+
+cmd_run() {
+    if [ ! -f "CMakeLists.txt" ]; then
+        echo "Error: not a yNet project (CMakeLists.txt not found)"
+        exit 1
+    fi
+
+    local name
+    name=$(grep "^project(" CMakeLists.txt | sed 's/project(\([^ )]*\).*/\1/')
+
+    if [ ! -f "build/$name" ]; then
+        echo "Binary not found. Building first..."
+        cmd_build
+    fi
+
+    cd build
+    echo "Starting $name..."
+    ./"$name"
+}
+
+cmd_clean() {
+    if [ -d "build" ]; then
+        rm -rf build
+        echo "Build files cleaned."
+    else
+        echo "Nothing to clean."
+    fi
+}
+
+case "${1}" in
+    new)    cmd_new "$2" ;;
+    build)  cmd_build ;;
+    run)    cmd_run ;;
+    clean)  cmd_clean ;;
+    help)   usage ;;
+    *)      usage ;;
+esac
