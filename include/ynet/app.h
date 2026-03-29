@@ -14,7 +14,7 @@ namespace ynet {
             Router router;
             Server server;
         public:
-            App() : config(loadConfig()), cache(), router(cache), server(config) {}
+            App() : config(loadConfig()), cache(config.max_cache_entries), router(cache), server(config) {}
             Route get(const std::string& path) { return router.get(path); }
             Route post(const std::string& path) { return router.post(path); }
             Route put(const std::string& path) { return router.put(path); }

@@ -16,5 +16,6 @@ namespace ynet {
         std::string cert_path;
         std::string key_path;
         size_t max_upload_size = 10 * 1024 * 1024;
+        size_t max_cache_entries = 1024;
     };
 }

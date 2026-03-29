@@ -1,26 +1,21 @@
 #pragma once
 
-#include <chrono>
+#include <memory>
 #include <mutex>
 #include <string>
-#include <filesystem>
 #include <unordered_map>
-namespace fs = std::filesystem;
-namespace ynet {
-    struct CacheEntry {
-        std::string content;
-        fs::file_time_type mtime;
-        std::chrono::steady_clock::time_point last_access;
-    };
+#include "ynet/cache/cache_policy.h"
+#include "ynet/cache/lru_policy.h"
 
+namespace ynet {
     class Cache {
         private:
             std::unordered_map<std::string, CacheEntry> entries;
             std::mutex mtx;
             size_t max_entries;
-            void evict();
+            std::unique_ptr<CachePolicy> policy;
         public:
-            Cache(size_t max_entries = 1024) : max_entries(max_entries) {}
+            Cache(size_t max_entries = 1024, std::unique_ptr<CachePolicy> policy = std::make_unique<LRUPolicy>()) : max_entries(max_entries),  policy(std::move(policy)){}
             std::string loadFile(const std::string& filepath);
             void clear();
     };

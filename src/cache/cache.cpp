@@ -1,17 +1,8 @@
 #include <fstream>
+#include <filesystem>
 #include "ynet/cache/cache.h"
 
 using namespace ynet;
-
-void Cache::evict() {
-    auto oldest = entries.begin();
-    for(auto it = entries.begin(); it != entries.end(); ++it) {
-        if(it->second.last_access < oldest->second.last_access) {
-            oldest = it;
-        }
-    }
-    entries.erase(oldest);
-}
 
 void Cache::clear() {
     std::lock_guard<std::mutex> lock(mtx);
@@ -28,7 +19,7 @@ std::string Cache::loadFile(const std::string& filepath) {
         return it->second.content;
     }
 
-    if(entries.size() >= max_entries) evict();
+    if(entries.size() >= max_entries) policy->evict(entries);
     std::ifstream file(filepath);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     entries[filepath] = {content, current_mtime, std::chrono::steady_clock::now()};

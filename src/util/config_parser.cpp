@@ -30,7 +30,8 @@ namespace ynet {
                 << "max_headers=64\n"
                 << "header_timeout=5000\n"
                 << "body_timeout=10000\n"
-                << "max_connections=1024\n";
+                << "max_connections=1024\n"
+                << "max_cache=1024\n";
         }
 
         std::ifstream file(conf_path);
@@ -58,6 +59,7 @@ namespace ynet {
             else if(key == "header_timeout") config.header_timeout_ms = std::stoi(value);
             else if(key == "body_timeout") config.body_timeout_ms = std::stoi(value);
             else if(key == "max_connections") config.max_connections = std::stoi(value);
+            else if(key == "max_cache") config.max_cache_entries = std::stoi(value);
         }
         return config;
     }
