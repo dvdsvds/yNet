@@ -144,6 +144,7 @@ void Server::start() {
         return ;
     }
 
+    std::cerr << "[ynet] listening on " << config.bind_addr << ":" << config.port << (config.use_tls ? " (HTTPS)" : " (HTTP)") << std::endl;
     ev.add(tcp_listener.getFd(), EPOLLIN);
     std::vector<epoll_event> events(config.max_connections);
 
