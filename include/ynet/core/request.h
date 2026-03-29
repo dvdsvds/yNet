@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include "ynet/security/session_data.h"
 #include "ynet/util/multipart_parser.h"
 
 namespace ynet {
@@ -24,6 +25,7 @@ namespace ynet {
             bool parse_error = false;
             int error_code = 0;
         public:
+            SessionData session;
             const std::string& getMethod() const { return method; }
             const std::string& getPath() const { return path; }
             const std::string& getVersion() const { return version; }
