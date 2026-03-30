@@ -1,4 +1,5 @@
 #include "ynet/util/url.h"
+#include <istream>
 #include "ynet/core/request.h"
 
 using namespace ynet;
@@ -22,6 +23,14 @@ std::optional<std::string> Request::getQueryParam(const std::string& key) const 
 std::optional<std::string> Request::getFormParam(const std::string& key) const {
     auto it = form_data.find(key);
     if(it != form_data.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> Request::getParam(const std::string& key) const {
+    auto it = params.find(key);
+    if(it != params.end()) {
         return it->second;
     }
     return std::nullopt;

@@ -84,7 +84,7 @@ void Server::handleRequest(int fd, Connection& conn) {
         return;
     }
 
-    auto handler = router->resolve(parseResult.getMethod(), parseResult.getPath());
+    auto handler = router->resolve(parseResult.getMethod(), parseResult.getPath(), parseResult);
     Response res;
 
     std::function<void()> next = [&](){

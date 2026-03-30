@@ -73,10 +73,58 @@ Route Router::del(const std::string& path) {
     return Route(*this, "DELETE", path);
 }
 
-std::optional<Handler> Router::resolve(const std::string& method, const std::string& path) const {
+std::optional<Handler> Router::resolve(const std::string& method, const std::string& path, Request& req) const {
     auto it = routes.find(method + ":" + path);
     if(it != routes.end()) {
         return it->second;
     }
+
+    std::vector<std::string> path_parts;
+    size_t start = 1;
+    while(start < path.size()) {
+        size_t slash = path.find('/', start);
+        if(slash == std::string::npos) {
+            path_parts.push_back(path.substr(start));
+            break;
+        }
+        path_parts.push_back(path.substr(start, slash - start));
+        start = slash + 1;
+    }
+
+    for(auto& [key, handler] : routes) {
+        size_t colon = key.find(':');
+        std::string route_method = key.substr(0, colon);
+        std::string route_path = key.substr(colon + 1);
+
+        if(route_method != method) continue;
+        if(route_path.find(':') == std::string::npos) continue;
+
+        std::vector<std::string> route_parts;
+        start = 1;
+        while(start < route_path.size()) {
+            size_t slash = route_path.find('/', start);
+            if(slash == std::string::npos) {
+                route_parts.push_back(route_path.substr(start));
+                break;
+            }
+            route_parts.push_back(route_path.substr(start, slash - start));
+            start = slash + 1;
+        }
+
+        if(route_parts.size() != path_parts.size()) continue;
+
+        bool match = true;
+        for(size_t i = 0; i < route_parts.size(); i++) {
+            if(route_parts[i][0] == ':') {
+                req.setParam(route_parts[i].substr(1), path_parts[i]);
+            } else if(route_parts[i] != path_parts[i]) {
+                match = false;
+                break;
+            }
+        }
+
+        if(match) return handler;
+    }
+
     return std::nullopt;
 }

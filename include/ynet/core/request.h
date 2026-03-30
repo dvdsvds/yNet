@@ -24,6 +24,7 @@ namespace ynet {
             std::unordered_map<std::string, std::string> form_data;
             bool parse_error = false;
             int error_code = 0;
+            std::unordered_map<std::string, std::string> params;
         public:
             SessionData session;
             const std::string& getMethod() const { return method; }
@@ -43,6 +44,9 @@ namespace ynet {
 
             void setClientIP(const std::string& ip) { client_ip = ip; }
             void setCsrfToken(const std::string& token) { csrf_token = token; }
+
+            std::optional<std::string> getParam(const std::string& key) const;
+            void setParam(const std::string& key, const std::string& value) { params[key] = value; }
 
             static Request parse(const char* raw, size_t len);
     };

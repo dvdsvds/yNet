@@ -49,7 +49,7 @@ namespace ynet {
 
             void addRoute(const std::string& method, const std::string& path, Handler handler);
             
-            std::optional<Handler> resolve(const std::string& method, const std::string& path) const;
+            std::optional<Handler> resolve(const std::string& method, const std::string& path, Request& req) const;
             std::string loadFile(const std::string& filepath) { return cache.loadFile(filepath); }
     };
 
