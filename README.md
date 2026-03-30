@@ -128,25 +128,23 @@ make
 
 ## 예제
 
-```cpp
+```cpp  
 #include <ynet/app.h>
+
+void hello(ynet::Request& req, ynet::Response& res) {
+    auto name = req.getParam("name");
+    res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
+}
 
 int main() {
     ynet::App app;
-
     app.get("/").html("<h1>Hello yNet!</h1>");
-
-    app.get("/api/hello").handle([](ynet::Request& req, ynet::Response& res) {
-        auto name = req.getQueryParam("name");
-        res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
-    });
-
+    app.get("/hello/:name").handle(hello);
     app.cors("*");
     app.session();
     app.listen();
 }
 ```
-
 ---
 
 ## API 레퍼런스
@@ -220,6 +218,9 @@ req.getVersion();  // "HTTP/1.1"
 
 // 헤더
 req.getHeader("Content-Type");  // std::optional<std::string>
+
+// URL 파라미터(/user/:id)
+req.getParam("id");             // std::optional<std::string> 
 
 // 쿼리 파라미터 (?key=value)
 req.getQueryParam("key");       // std::optional<std::string>

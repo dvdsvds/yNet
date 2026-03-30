@@ -131,16 +131,15 @@ make
 ```cpp
 #include <ynet/app.h>
 
+void hello(ynet::Request& req, ynet::Response& res) {
+    auto name = req.getParam("name");
+    res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
+}
+
 int main() {
     ynet::App app;
-
     app.get("/").html("<h1>Hello yNet!</h1>");
-
-    app.get("/api/hello").handle([](ynet::Request& req, ynet::Response& res) {
-        auto name = req.getQueryParam("name");
-        res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
-    });
-
+    app.get("/hello/:name").handle(hello);
     app.cors("*");
     app.session();
     app.listen();
@@ -220,6 +219,9 @@ req.getVersion();  // "HTTP/1.1"
 
 // Headers
 req.getHeader("Content-Type");  // std::optional<std::string>
+
+// URL parameters (/user/:id)
+req.getParam("id");             // std::optional<std::string>
 
 // Query parameters (?key=value)
 req.getQueryParam("key");       // std::optional<std::string>
