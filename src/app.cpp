@@ -16,7 +16,7 @@ void App::rateLimit(int max_requests, int period_seconds) { server.use(ynet::Rat
 void App::logger() { server.use(ynet::Logger()); }
 void App::csrf() { server.use(ynet::Csrf()); }
 void App::sanitizer() { server.use(ynet::Sanitizer()); }
-void App::secureHeaders() { server.use(ynet::SecureHeaders()); }
+void App::secureHeaders(const std::string& csp) { server.use(ynet::SecureHeaders(csp)); }
 void App::session() { server.use(ynet::Session()); }
 void App::serveStatic(const std::string& prefix, const std::string& dir) { server.serveStatic(prefix, dir); }
 void App::ws(const std::string& path, WsHandler handler) { server.ws(path, handler); }

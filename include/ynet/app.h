@@ -25,7 +25,7 @@ namespace ynet {
             void logger();
             void csrf();
             void sanitizer();
-            void secureHeaders();
+            void secureHeaders(const std::string& csp = "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'");
             void session();
             void serveStatic(const std::string& prefix, const std::string& dir);
             void ws(const std::string& path, WsHandler handler);
