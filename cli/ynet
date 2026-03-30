@@ -55,23 +55,142 @@ CMAKEOF
 
     cat > "$name/src/main.cpp" << 'CPPEOF'
 #include <ynet/app.h>
+#include <ynet/util/template_engine.h>
+#include <ynet/util/json.h>
 
 int main() {
     ynet::App app;
 
-    app.get("/").handle([](ynet::Request& req, ynet::Response& res) {
-        res.html("<h1>Welcome to yNet!</h1>");
-    });
+    app.serveStatic("/static", "static");
 
-    app.get("/hello").handle([](ynet::Request& req, ynet::Response& res) {
-        auto name = req.getQueryParam("name");
-        res.html("<h1>Hello, " + name.value_or("World") + "!</h1>");
+    app.get("/").handle([](ynet::Request& req, ynet::Response& res) {
+        ynet::Cache cache(256);
+        ynet::TemplateEngine engine(cache);
+
+        ynet::Object vars;
+        vars["title"] = ynet::JsonValue{std::string("Welcome")};
+        vars["version"] = ynet::JsonValue{std::string("0.1.0")};
+
+        std::string html = engine.render("templates/index.html", ynet::JsonValue{vars});
+        res.html(html);
     });
 
     app.listen();
     return 0;
 }
 CPPEOF
+
+    cat > "$name/templates/index.html" << 'HTMLEOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} | yNet</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, 'Segoe UI', sans-serif;
+            background: #0a0a0a;
+            color: #e5e5e5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            max-width: 600px;
+            padding: 2rem;
+        }
+        .logo {
+            font-family: monospace;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #22d3ee, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .version {
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: #22d3ee;
+            background: rgba(34, 211, 238, 0.1);
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            margin-bottom: 2rem;
+        }
+        .desc {
+            color: #a3a3a3;
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+        }
+        .desc code {
+            color: #22d3ee;
+        }
+        .links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .links a {
+            font-family: monospace;
+            font-size: 0.875rem;
+            color: #a3a3a3;
+            text-decoration: none;
+            padding: 0.625rem 1.25rem;
+            border: 1px solid #262626;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+        }
+        .links a:hover {
+            color: #e5e5e5;
+            border-color: #525252;
+        }
+        .terminal {
+            margin-top: 3rem;
+            background: #141414;
+            border: 1px solid #262626;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            text-align: left;
+            font-family: monospace;
+            font-size: 0.875rem;
+            line-height: 2;
+        }
+        .terminal .prompt { color: #22d3ee; }
+        .terminal .comment { color: #525252; }
+        .terminal .path { color: #a3a3a3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">yNet</div>
+        <div class="version">v{{version}}</div>
+        <p class="desc">
+            Your yNet project is running. Edit <code>src/main.cpp</code>
+            and <code>templates/</code> to get started.
+        </p>
+        <div class="links">
+            <a href="https://github.com/dvdsvds/yNet" target="_blank">GitHub ↗</a>
+            <a href="https://github.com/dvdsvds/yNet#readme" target="_blank">Docs ↗</a>
+        </div>
+        <div class="terminal">
+            <span class="comment"># Edit your routes</span><br>
+            <span class="prompt">$</span> <span class="path">vim src/main.cpp</span><br>
+            <span class="comment"># Edit your templates</span><br>
+            <span class="prompt">$</span> <span class="path">vim templates/index.html</span><br>
+            <span class="comment"># Rebuild and run</span><br>
+            <span class="prompt">$</span> <span class="path">ynet build && ynet run</span>
+        </div>
+    </div>
+</body>
+</html>
+HTMLEOF
 
     cat > "$name/.gitignore" << 'GITEOF'
 build/
