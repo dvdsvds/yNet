@@ -1,5 +1,6 @@
 #include <unordered_map>
 #include "ynet/core/response.h"
+#include "ynet/util/template_engine.h"
 
 using namespace ynet;
 
@@ -85,4 +86,12 @@ Response& Response::html(const std::string& html_str) {
 Response& Response::redirect(const std::string& url, int code) {
     status(code).header("Location", url);
     return *this;
+}
+
+Response& Response::render(const std::string& file, const JsonValue& vars) {
+    if(cache_) {
+        TemplateEngine engine(*cache_);
+        return html(engine.render(file, vars));
+    }
+    return html("<h1>500 - Template engine not availble</h1>");
 }

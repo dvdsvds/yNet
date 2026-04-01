@@ -86,6 +86,7 @@ void Server::handleRequest(int fd, Connection& conn) {
 
     auto handler = router->resolve(parseResult.getMethod(), parseResult.getPath(), parseResult);
     Response res;
+    res.setCache(router ? &router->getCache() : nullptr);
 
     std::function<void()> next = [&](){
         if(handler) {

@@ -46,11 +46,9 @@ namespace ynet {
             Route post(const std::string& path);
             Route put(const std::string& path);
             Route del(const std::string& path);
-
             void addRoute(const std::string& method, const std::string& path, Handler handler);
-            
             std::optional<Handler> resolve(const std::string& method, const std::string& path, Request& req) const;
             std::string loadFile(const std::string& filepath) { return cache.loadFile(filepath); }
+            Cache& getCache() { return cache; }
     };
-
 }
