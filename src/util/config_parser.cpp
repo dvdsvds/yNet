@@ -17,6 +17,10 @@ namespace ynet {
         }
 
         if(!fs::exists(conf_path)) {
+            if(dir_name == "build") {
+                std::cerr << "[WARNING] running from build directory, using defaults\n";
+                return Config{};
+            }
             std::ofstream out(conf_path);
             out << "# " << dir_name << " configuration\n" 
                 << "port=8080\n"
