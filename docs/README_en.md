@@ -2,7 +2,7 @@
 
 A full-stack HTTP/HTTPS web framework built with C++20
 
-**[한국어](../README.md)**
+**[한국어](../README.md)** | **[Website](https://ynetcpp.dev)**
 
 ---
 
@@ -30,7 +30,7 @@ epoll event loop, thread pool
 Handshake, frame send/receive, onOpen/onMessage/onClose callbacks
 
 ### Security
-HTTPS (TLS), CORS, CSRF token validation, session management (auto-generation, expiration, sliding expiration), rate limiter, input sanitizer, automatic security headers
+HTTPS (TLS), CORS, CSRF token validation, session management (auto-generation, expiration, sliding expiration), rate limiter, input sanitizer, automatic security headers (custom CSP support)
 
 ### Session
 Cookie-based session management, automatic session ID generation (`Set-Cookie`), expiration with sliding expiration, `req.session.get()`/`set()` for session data storage/retrieval, automatic security flags (HttpOnly, Secure, SameSite)
@@ -42,7 +42,7 @@ File cache (mtime-based refresh), swappable eviction policy via abstract `CacheP
 multipart/form-data parsing, file saving (path traversal prevention), upload size limit (413 response), filename collision prevention (auto-incrementing)
 
 ### Template Engine
-Variable substitution `{{var}}`, automatic HTML escaping, raw output `{{{var}}}`, conditionals `{{#if}}`, loops `{{#each}}`, file includes `{{> partial}}`, file change detection caching
+One-line rendering with `res.render()`, variable substitution `{{var}}`, automatic HTML escaping, raw output `{{{var}}}`, conditionals `{{#if}}`, loops `{{#each}}`, file includes `{{> partial}}`, file change detection caching
 
 ### Static File Serving
 Directory-based static file serving, directory traversal prevention
@@ -95,6 +95,7 @@ myapp/
 │   └── main.cpp          # Default handlers included
 ├── static/
 └── templates/
+    └── index.html        # Default Welcome page
 ```
 
 ### Requirements
@@ -106,11 +107,10 @@ myapp/
 
 ### For HTTPS
 
-Set `tls=on` in the config file, then generate certificates:
+Set `tls=on` in the config file, then place certificates in the config directory:
 
 ```bash
-cd build/config
-openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes
+openssl req -x509 -newkey rsa:2048 -keyout config/key.pem -out config/cert.pem -days 365 -nodes
 ```
 
 ### Manual Build (without CLI)
@@ -131,15 +131,16 @@ make
 ```cpp
 #include <ynet/app.h>
 
-void hello(ynet::Request& req, ynet::Response& res) {
-    auto name = req.getParam("name");
-    res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
-}
-
 int main() {
     ynet::App app;
+
     app.get("/").html("<h1>Hello yNet!</h1>");
-    app.get("/hello/:name").handle(hello);
+
+    app.get("/api/hello").handle([](ynet::Request& req, ynet::Response& res) {
+        auto name = req.getQueryParam("name");
+        res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
+    });
+
     app.cors("*");
     app.session();
     app.listen();
@@ -171,7 +172,8 @@ app.cors("*");
 app.logger();
 app.csrf();
 app.sanitizer();
-app.secureHeaders();
+app.secureHeaders();                            // Default CSP
+app.secureHeaders("default-src 'self'; ...");   // Custom CSP
 app.session();
 app.rateLimit(100, 60);
 
@@ -220,9 +222,6 @@ req.getVersion();  // "HTTP/1.1"
 // Headers
 req.getHeader("Content-Type");  // std::optional<std::string>
 
-// URL parameters (/user/:id)
-req.getParam("id");             // std::optional<std::string>
-
 // Query parameters (?key=value)
 req.getQueryParam("key");       // std::optional<std::string>
 
@@ -261,6 +260,9 @@ res.json("{\"status\":\"ok\"}");    // Content-Type: application/json + 200
 res.html("<h1>Hello</h1>");         // Content-Type: text/html; charset=utf-8 + 200
 res.redirect("/new-path");          // 302 redirect
 res.redirect("/new-path", 301);     // 301 redirect
+
+// Template rendering
+res.render("templates/page.html", vars);  // Render with template engine + text/html response
 ```
 
 ### Session
@@ -319,13 +321,14 @@ max_cache=2048
 
 ```cpp
 // Built-in middleware
-app.cors("*");                  // CORS
-app.logger();                   // Request logger
-app.csrf();                     // CSRF token validation
-app.sanitizer();                // Input sanitizer
-app.secureHeaders();            // Security headers
-app.session();                  // Session management
-app.rateLimit(100, 60);         // 100 requests per 60 seconds
+app.cors("*");                                  // CORS
+app.logger();                                   // Request logger
+app.csrf();                                     // CSRF token validation
+app.sanitizer();                                // Input sanitizer
+app.secureHeaders();                            // Security headers (default CSP)
+app.secureHeaders("default-src 'self'; ...");   // Custom CSP
+app.session();                                  // Session management
+app.rateLimit(100, 60);                         // 100 requests per 60 seconds
 
 // Custom middleware (when using Server directly)
 server.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
@@ -380,15 +383,12 @@ app.ws("/ws", [](ynet::WebSocket& ws) {
 ### Template Engine
 
 ```cpp
-ynet::TemplateEngine engine;
-
-ynet::Object obj;
-obj["username"] = ynet::JsonValue{std::string("dvd")};
-obj["logged_in"] = ynet::JsonValue{true};
-
-ynet::JsonValue vars{obj};
-std::string html = engine.render("templates/page.html", vars);
-res.html(html);
+app.get("/").handle([](ynet::Request& req, ynet::Response& res) {
+    ynet::Object vars;
+    vars["username"] = ynet::JsonValue{std::string("dvd")};
+    vars["logged_in"] = ynet::JsonValue{true};
+    res.render("templates/page.html", ynet::JsonValue{vars});
+});
 ```
 
 Template syntax:
@@ -508,4 +508,4 @@ src/
 
 ## License
 
-MIT License
+Apache License 2.0

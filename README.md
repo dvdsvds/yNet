@@ -2,7 +2,7 @@
 
 C++20 기반 풀스택 HTTP/HTTPS 웹 프레임워크
 
-**[English](docs/README_en.md)**
+**[English](docs/README_en.md)** | **[Website](https://ynetcpp.dev)**
 
 ---
 
@@ -30,7 +30,7 @@ epoll 이벤트 루프, 스레드 풀
 핸드셰이크, 프레임 송수신, onOpen/onMessage/onClose 콜백
 
 ### 보안
-HTTPS (TLS), CORS, CSRF 토큰 검증, 세션 관리 (자동 생성, 만료, sliding expiration), Rate Limiter, 입력 검증 (Sanitizer), 보안 헤더 자동 적용
+HTTPS (TLS), CORS, CSRF 토큰 검증, 세션 관리 (자동 생성, 만료, sliding expiration), Rate Limiter, 입력 검증 (Sanitizer), 보안 헤더 자동 적용 (커스텀 CSP 지원)
 
 ### 세션
 Cookie 기반 세션 관리, 자동 세션 ID 생성 (`Set-Cookie`), 만료 및 sliding expiration, `req.session.get()`/`set()`으로 세션 데이터 저장/조회, 보안 플래그 자동 적용 (HttpOnly, Secure, SameSite)
@@ -42,7 +42,7 @@ Cookie 기반 세션 관리, 자동 세션 ID 생성 (`Set-Cookie`), 만료 및 
 multipart/form-data 파싱, 파일 저장 (path traversal 방지), 업로드 크기 제한 (413 응답), 파일명 충돌 방지 (자동 번호 증가)
 
 ### 템플릿 엔진
-변수 치환 `{{var}}`, HTML 자동 이스케이프, raw 출력 `{{{var}}}`, 조건부 `{{#if}}`, 반복 `{{#each}}`, 파일 인클루드 `{{> partial}}`, 파일 변경 감지 캐싱
+`res.render()` 한 줄로 렌더링, 변수 치환 `{{var}}`, HTML 자동 이스케이프, raw 출력 `{{{var}}}`, 조건부 `{{#if}}`, 반복 `{{#each}}`, 파일 인클루드 `{{> partial}}`, 파일 변경 감지 캐싱
 
 ### 정적 파일 서빙
 디렉토리 기반 정적 파일 제공, directory traversal 방지
@@ -95,6 +95,7 @@ myapp/
 │   └── main.cpp          # 기본 핸들러 포함
 ├── static/
 └── templates/
+    └── index.html        # 기본 Welcome 페이지
 ```
 
 ### 요구사항
@@ -106,11 +107,10 @@ myapp/
 
 ### HTTPS 사용 시
 
-config 파일에서 `tls=on`으로 설정 후, 인증서를 생성합니다.
+config 파일에서 `tls=on`으로 설정 후, 인증서를 config 디렉토리에 넣습니다.
 
 ```bash
-cd build/config
-openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem -days 365 -nodes
+openssl req -x509 -newkey rsa:2048 -keyout config/key.pem -out config/cert.pem -days 365 -nodes
 ```
 
 ### 수동 빌드 (CLI 없이)
@@ -128,23 +128,25 @@ make
 
 ## 예제
 
-```cpp  
+```cpp
 #include <ynet/app.h>
-
-void hello(ynet::Request& req, ynet::Response& res) {
-    auto name = req.getParam("name");
-    res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
-}
 
 int main() {
     ynet::App app;
+
     app.get("/").html("<h1>Hello yNet!</h1>");
-    app.get("/hello/:name").handle(hello);
+
+    app.get("/api/hello").handle([](ynet::Request& req, ynet::Response& res) {
+        auto name = req.getQueryParam("name");
+        res.json(R"({"message": "hello, )" + name.value_or("world") + R"("})");
+    });
+
     app.cors("*");
     app.session();
     app.listen();
 }
 ```
+
 ---
 
 ## API 레퍼런스
@@ -170,7 +172,8 @@ app.cors("*");
 app.logger();
 app.csrf();
 app.sanitizer();
-app.secureHeaders();
+app.secureHeaders();                            // 기본 CSP
+app.secureHeaders("default-src 'self'; ...");   // 커스텀 CSP
 app.session();
 app.rateLimit(100, 60);
 
@@ -219,9 +222,6 @@ req.getVersion();  // "HTTP/1.1"
 // 헤더
 req.getHeader("Content-Type");  // std::optional<std::string>
 
-// URL 파라미터(/user/:id)
-req.getParam("id");             // std::optional<std::string> 
-
 // 쿼리 파라미터 (?key=value)
 req.getQueryParam("key");       // std::optional<std::string>
 
@@ -260,6 +260,9 @@ res.json("{\"status\":\"ok\"}");    // Content-Type: application/json + 200
 res.html("<h1>Hello</h1>");         // Content-Type: text/html; charset=utf-8 + 200
 res.redirect("/new-path");          // 302 리다이렉트
 res.redirect("/new-path", 301);     // 301 리다이렉트
+
+// 템플릿 렌더링
+res.render("templates/page.html", vars);  // 템플릿 엔진으로 렌더링 + text/html 응답
 ```
 
 ### 세션
@@ -318,13 +321,14 @@ max_cache=2048
 
 ```cpp
 // 내장 미들웨어
-app.cors("*");                  // CORS
-app.logger();                   // 요청 로거
-app.csrf();                     // CSRF 토큰 검증
-app.sanitizer();                // 입력 검증
-app.secureHeaders();            // 보안 헤더
-app.session();                  // 세션 관리
-app.rateLimit(100, 60);         // 60초에 100번 제한
+app.cors("*");                                  // CORS
+app.logger();                                   // 요청 로거
+app.csrf();                                     // CSRF 토큰 검증
+app.sanitizer();                                // 입력 검증
+app.secureHeaders();                            // 보안 헤더 (기본 CSP)
+app.secureHeaders("default-src 'self'; ...");   // 커스텀 CSP
+app.session();                                  // 세션 관리
+app.rateLimit(100, 60);                         // 60초에 100번 제한
 
 // 커스텀 미들웨어 (Server 직접 사용 시)
 server.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
@@ -379,15 +383,12 @@ app.ws("/ws", [](ynet::WebSocket& ws) {
 ### 템플릿 엔진
 
 ```cpp
-ynet::TemplateEngine engine;
-
-ynet::Object obj;
-obj["username"] = ynet::JsonValue{std::string("dvd")};
-obj["logged_in"] = ynet::JsonValue{true};
-
-ynet::JsonValue vars{obj};
-std::string html = engine.render("templates/page.html", vars);
-res.html(html);
+app.get("/").handle([](ynet::Request& req, ynet::Response& res) {
+    ynet::Object vars;
+    vars["username"] = ynet::JsonValue{std::string("dvd")};
+    vars["logged_in"] = ynet::JsonValue{true};
+    res.render("templates/page.html", ynet::JsonValue{vars});
+});
 ```
 
 템플릿 문법:
@@ -507,4 +508,4 @@ src/
 
 ## 라이선스
 
-MIT License
+Apache License 2.0
