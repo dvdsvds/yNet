@@ -43,6 +43,12 @@ Request Request::parse(const char* raw, size_t len) {
     size_t sp2 = data.find(' ', sp1 + 1);
     size_t line_end = data.find("\r\n");
 
+    if(sp1 == std::string::npos || sp2 == std::string::npos || line_end == std::string::npos) {
+        req.parse_error = true;
+        req.error_code = 400;
+        return req;
+    }
+
     req.method = data.substr(0, sp1);
     req.path = data.substr(sp1 + 1, sp2 - sp1 - 1);
     size_t qpos = req.path.find('?');
@@ -55,9 +61,14 @@ Request Request::parse(const char* raw, size_t len) {
 
     size_t pos = line_end + 2;
     size_t next = data.find("\r\n", pos);
-    while(next != pos) {
+    while(next != std::string::npos && next != pos) {
         std::string header = data.substr(pos, next - pos); 
         size_t colon = header.find(':');
+        if(colon == std::string::npos) {
+            pos = next + 2;
+            next = data.find("\r\n", pos);
+            continue;
+        }
         req.headers[header.substr(0, colon)] = header.substr(colon + 2);
         pos = next + 2;
         next = data.find("\r\n", pos);
