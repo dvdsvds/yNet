@@ -11,7 +11,7 @@ TlsContext::TlsContext(const std::string& cert_path, const std::string& key_path
         throw std::runtime_error("SSL_CTX_new failed");
     }
     SSL_CTX_set_min_proto_version(ctx, TLS1_3_VERSION);
-    if(SSL_CTX_use_certificate_file(ctx, cert_path.c_str(), SSL_FILETYPE_PEM) <= 0) {
+    if(SSL_CTX_use_certificate_chain_file(ctx, cert_path.c_str()) <= 0) {
         SSL_CTX_free(ctx);
         throw std::runtime_error("cert load failed");
     }
