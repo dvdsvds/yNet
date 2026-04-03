@@ -29,7 +29,7 @@ namespace ynet {
 
         std::ofstream ofs(fullpath, std::ios::binary);
         if(!ofs.is_open()) return false;
-        ofs.write(part.data, part.data_len);
+        ofs.write(part.data.data(), part.data.size());
         return !ofs.fail();
     }
 }

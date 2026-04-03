@@ -30,9 +30,6 @@ target_link_options(ynet PRIVATE
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_executable(example examples/main.cpp)
     target_link_libraries(example ynet)
-
-    add_executable(test_client examples/client.cpp)
-    target_link_libraries(test_client ynet)
 endif()
 
 install(DIRECTORY include/ynet DESTINATION include)

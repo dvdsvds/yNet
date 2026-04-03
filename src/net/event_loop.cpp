@@ -1,15 +1,16 @@
+#include "ynet/net/event_loop.h"
 #include <unistd.h>
-#include <ynet/net/event_loop.h>
 #include <fcntl.h>
 
 using namespace ynet;
 
 EventLoop::~EventLoop() {
-    close(epfd);
+    if(epfd != -1) close(epfd);
 }
 
 int EventLoop::setNonBlocking(int fd) {
     int flags = fcntl(fd, F_GETFL); 
+    if(flags == -1) return -1;
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 }
 

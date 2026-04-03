@@ -153,11 +153,12 @@ Request Request::parse(const char* raw, size_t len, const Config& config) {
             req.parse_error = true;
             req.error_code = 400;
         } else {
-            parser.parse(req.body.c_str(), req.body.size(), *ct);
+            auto body_ptr = std::make_shared<const std::string>(req.body);
+            parser.parse(body_ptr, *ct);
             req.parts_ = parser.getParts();
             for(const auto& part : req.parts_) {
                 if(part.filename.empty()) {
-                    req.form_data[part.name] = std::string(part.data, part.data_len);
+                    req.form_data[part.name] = std::string(part.data);
                 }
             }
         }

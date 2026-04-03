@@ -19,15 +19,24 @@ TlsContext::TlsContext(const std::string& cert_path, const std::string& key_path
         SSL_CTX_free(ctx);
         throw std::runtime_error("key load failed");
     }
+    if(SSL_CTX_check_private_key(ctx) != 1) {
+        SSL_CTX_free(ctx);
+        throw std::runtime_error("cert/key mismatch");
+    }
 }
 
 SSL* TlsContext::wrap(int fd) {
     SSL* ssl = SSL_new(ctx);
     if(ssl == nullptr) { throw std::runtime_error("SSL_new failed"); }
-    SSL_set_fd(ssl, fd);
+    if(SSL_set_fd(ssl, fd) <= 0) {
+        SSL_free(ssl);
+        throw std::runtime_error("SSL_set_fd failed");
+    }
     return ssl;
 }
 
 TlsContext::~TlsContext() {
-    SSL_CTX_free(ctx);
+    if(ctx) {
+        SSL_CTX_free(ctx);
+    }
 }

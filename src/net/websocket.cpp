@@ -1,6 +1,5 @@
-#include <iostream>
-#include <sys/socket.h>
 #include "ynet/util/crypto.h"
+#include <sys/socket.h>
 #include <ynet/net/websocket.h>
 #include <sys/epoll.h>
 #include <unistd.h>
@@ -18,7 +17,9 @@ bool WebSocket::isUpgrade(const Request& req) {
 }
 
 std::string WebSocket::handshake(const Request &req) {
-    std::string key = req.getHeader("Sec-WebSocket-Key").value();
+    auto key_opt = req.getHeader("Sec-WebSocket-Key");
+    if(!key_opt.has_value()) return "";
+    std::string key = key_opt.value();
     std::string combined = key + "258EAFA5-E914-47DA-95CA-5AB9DC176B71";
     unsigned char hash[SHA_DIGEST_LENGTH];
     SHA1(reinterpret_cast<const unsigned char*>(combined.c_str()), combined.size(), hash);
@@ -29,7 +30,9 @@ std::string WebSocket::handshake(const Request &req) {
 
 std::string WebSocket::readFrame() {
     char header[2];
-    conn->read(header, 2);
+    if(conn->read(header, 2) <= 0) {
+        return "";
+    }
 
     uint8_t opcode = header[0] & 0x0F;
     bool masked = header[1] & 0x80;
@@ -37,23 +40,36 @@ std::string WebSocket::readFrame() {
 
     if(payload_len == 126) {
         char ext[2];
-        conn->read(ext, 2);
+        if(conn->read(ext, 2) <= 0) {
+            return "";
+        }
         payload_len = (static_cast<uint8_t>(ext[0]) << 8) | static_cast<uint8_t>(ext[1]);
     } else if(payload_len == 127) {
         char ext[8];
-        conn->read(ext, 8);
+        if(conn->read(ext, 8) <= 0) {
+            return "";
+        }
         payload_len = 0;
         for(int i = 0; i < 8; i++) {
             payload_len = (payload_len << 8) | static_cast<uint8_t>(ext[i]);
         }
     }
 
+    if(payload_len > 16 * 1024 * 1024) {
+        conn->close();
+        return "";
+    }
+
     char mask_key[4] = {0};
-    if(masked == 1) {
-        conn->read(mask_key, 4);
+    if(masked) {
+        if(conn->read(mask_key, 4) <= 0) {
+            return "";
+        }
     }
     std::string payload(payload_len, 0);
-    conn->read(&payload[0], payload_len);
+    if(conn->read(&payload[0], payload_len) <= 0) {
+        return "";
+    } 
 
     if(masked) {
         for(size_t i = 0; i < payload_len; i++) {
@@ -62,6 +78,7 @@ std::string WebSocket::readFrame() {
     }
 
     if(opcode == 0x8) {
+        sendFrame("", 0x8);
         conn->close();
         return "";
     } else if(opcode == 0x9) {
@@ -94,12 +111,16 @@ void WebSocket::sendFrame(const std::string& data, uint8_t opcode) {
 
 void WebSocket::run() {
     int epfd = epoll_create1(0);
+    if(epfd == -1) return;
     struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = conn->getClientFd();
-    epoll_ctl(epfd, EPOLL_CTL_ADD, conn->getClientFd(), &ev);
+    if(epoll_ctl(epfd, EPOLL_CTL_ADD, conn->getClientFd(), &ev) == -1) {
+        close(epfd);
+        return;
+    }
     
-    on_open();
+    if(on_open) on_open();
     
     struct epoll_event events[1];
     while(true) {
@@ -107,8 +128,8 @@ void WebSocket::run() {
         if(n <= 0) continue;
         std::string payload = readFrame();
         if(payload.empty()) break;
-        on_message(payload);
+        if(on_message) on_message(payload);
     }
-    on_close();
+    if(on_close) on_close();
     close(epfd);
 }

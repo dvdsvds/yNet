@@ -17,9 +17,15 @@ int TcpClient::connect(const std::string& ip, uint16_t port) {
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
+    if(inet_pton(AF_INET, ip.c_str(), &addr.sin_addr) != 1) {
+        ::close(this->fd);
+        this->fd = -1;
+        return -1;
+    }
 
     if(::connect(this->fd, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == -1) {
+        ::close(this->fd);
+        this->fd = -1;
         return -1;
     }
 
@@ -35,6 +41,8 @@ int TcpClient::recv(char* buf, size_t len) {
 } 
 
 void TcpClient::close() {
-    ::close(this->fd);
-    this->fd = -1;
+    if(this->fd != 1) {
+        ::close(this->fd);
+        this->fd = -1;
+    }
 }

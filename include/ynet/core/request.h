@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -27,7 +28,7 @@ namespace ynet {
             int error_code = 0;
             std::unordered_map<std::string, std::string> params;
         public:
-            SessionData session;
+            std::shared_ptr<SessionData> session;
             const std::string& getMethod() const { return method; }
             const std::string& getPath() const { return path; }
             const std::string& getVersion() const { return version; }

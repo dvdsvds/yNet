@@ -1,13 +1,13 @@
 #pragma once
 
-#include <memory>
 #include "ynet/core/config.h"
 #include "ynet/net/connection.h"
+#include <memory>
 
 namespace ynet {
     class TcpListener {
         private:
-            int server_fd;
+            int server_fd = -1;
             Config config;            
         public:
             TcpListener(const Config& config) :

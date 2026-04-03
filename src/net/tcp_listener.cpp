@@ -18,6 +18,8 @@ int TcpListener::bind() {
     int opt = 1;
     int sockopt = ::setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     if(sockopt == -1) {
+        ::close(server_fd); 
+        server_fd = -1;
         return -1;
     }
 
@@ -25,10 +27,17 @@ int TcpListener::bind() {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(config.port);
     if(::inet_pton(AF_INET, config.bind_addr.c_str(), &addr.sin_addr) != 1) {
+        ::close(server_fd); 
+        server_fd = -1;
         return -1;
     }
 
-    return ::bind(server_fd, (sockaddr*)&addr, sizeof(addr));
+    int ret = ::bind(server_fd, (sockaddr*)&addr, sizeof(addr));
+    if(ret == -1) {
+        ::close(server_fd);
+        server_fd = -1;
+    }
+    return ret;
 }
 
 int TcpListener::listen() {
@@ -52,6 +61,8 @@ std::unique_ptr<Connection> TcpListener::accept() {
 }
 
 void TcpListener::close() {
-    ::close(server_fd);
-    server_fd = -1;
+    if(server_fd != -1) {
+        ::close(server_fd);
+        server_fd = -1;
+    }
 }

@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include "ynet/core/server.h"
+#include "ynet/security/session.h"
 
 using namespace ynet;
 
@@ -13,6 +14,9 @@ void Server::handleWebSocket(Connection& conn, Request& req) {
         conn.write(res.c_str(), res.size());
         WebSocket ws(&conn);
         it->second(ws);
+    } else {
+        std::string res = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n";
+        conn.write(res.c_str(), res.size());
     }
 }
 
@@ -40,7 +44,15 @@ void Server::handleRequest(int fd, Connection& conn) {
         size_t cl_pos = raw.find("Content-Length: ");
         if(cl_pos != std::string::npos) {
             size_t cl_end = raw.find("\r\n", cl_pos);
-            content_length = std::stoul(raw.substr(cl_pos + 16, cl_end - cl_pos - 16));
+            try {
+                content_length = std::stoul(raw.substr(cl_pos + 16, cl_end - cl_pos - 16));
+            } catch(const std::exception&) {
+                Response res = Response::error(400);
+                res.send(conn);
+                std::lock_guard<std::mutex> lock(conn_mtx);
+                connections.erase(fd);
+                return;
+            }
         }
         if(content_length > config.max_upload_size) {
             Response res = Response::error(413, "Upload size exceeds limit");
@@ -52,10 +64,14 @@ void Server::handleRequest(int fd, Connection& conn) {
             }
             return;
         }
+
+        int max_reads = content_length / 4096 + 10;
+        int reads = 0;
         while(raw.size() - body_start < content_length) {
             ssize_t n = conn.read(buf, sizeof(buf));
             if(n <= 0) break;
             raw.append(buf, n);
+            if(++reads > max_reads) break;
         }
     }
 
@@ -65,7 +81,7 @@ void Server::handleRequest(int fd, Connection& conn) {
         return;
     }
 
-    auto parseResult = Request::parse(raw.c_str(), raw.size());
+    auto parseResult = Request::parse(raw.c_str(), raw.size(), config);
     parseResult.setClientIP(conn.getClientIP());
     if(parseResult.isParseError()) {
         Response res = Response::error(400);
@@ -79,6 +95,14 @@ void Server::handleRequest(int fd, Connection& conn) {
 
     if(WebSocket::isUpgrade(parseResult)) {
         handleWebSocket(conn, parseResult);
+        std::lock_guard<std::mutex> lock(conn_mtx);
+        connections.erase(fd);
+        return;
+    }
+
+    if(!router) {
+        Response res = Response::error(404);
+        res.send(conn);
         std::lock_guard<std::mutex> lock(conn_mtx);
         connections.erase(fd);
         return;
@@ -135,6 +159,14 @@ void Server::handleRequest(int fd, Connection& conn) {
     }
 }
 
+void Server::stop() {
+    running = false;
+    tcp_listener.close();
+    session_shutdown();
+    std::lock_guard<std::mutex> lock(conn_mtx);
+    connections.clear();
+}
+
 void Server::start() {
     if(tcp_listener.bind() == -1) {
         std::cerr << "bind failed" << std::endl;
@@ -149,7 +181,7 @@ void Server::start() {
     ev.add(tcp_listener.getFd(), EPOLLIN);
     std::vector<epoll_event> events(config.max_connections);
 
-    while(1) {
+    while(running) {
         int wait = ev.wait(events.data(), -1);
         for(int i = 0; i < wait; i++) {
             if(events[i].data.fd == tcp_listener.getFd()) {
@@ -170,13 +202,15 @@ void Server::start() {
             } else {
                 int fd = events[i].data.fd;
                 ev.remove(fd);
-                tp.submit([this, fd]() {
-                    Connection* conn; 
-                    {
-                        std::lock_guard<std::mutex> lock(conn_mtx);
-                        conn = connections[fd].get();
-                    }
-                    handleRequest(fd, *conn);
+
+                std::shared_ptr<Connection> conn_ptr;
+                {
+                    std::lock_guard<std::mutex> lock(conn_mtx);
+                    conn_ptr = connections[fd];
+                }
+                if(!conn_ptr) continue;
+                tp.submit([this, fd, conn_ptr]() {
+                    handleRequest(fd, *conn_ptr);
                 });
             }
         }

@@ -19,6 +19,10 @@ void Route::json(const std::string& content) {
 void Route::file(const std::string& filepath) {
     router.addRoute(method, path, [&router = this->router, filepath](Request&, Response& res) {
         std::string content = router.loadFile(filepath);
+        if(content.empty()) {
+            res.status(500).body("Internal Server Error");
+            return;
+        }
         res.html(content);
     });
 }
@@ -50,6 +54,12 @@ void ErrorRoute::json(const std::string& content) {
 void ErrorRoute::file(const std::string& filepath) {
     server.onError(code, [filepath](const Request&) {
         std::ifstream f(filepath);
+        if(!f.is_open()) {
+            Response res;
+            res.status(500).html("Internal Server Error");
+            return res;
+        }
+
         std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
         Response res;
         res.html(content);
@@ -113,17 +123,26 @@ std::optional<Handler> Router::resolve(const std::string& method, const std::str
 
         if(route_parts.size() != path_parts.size()) continue;
 
+        std::unordered_map<std::string, std::string> temp_params;
         bool match = true;
         for(size_t i = 0; i < route_parts.size(); i++) {
+            if(route_parts[i].empty()) {
+                match = false;
+                break;
+            }
             if(route_parts[i][0] == ':') {
-                req.setParam(route_parts[i].substr(1), path_parts[i]);
+                temp_params[route_parts[i].substr(1)] = path_parts[i];
             } else if(route_parts[i] != path_parts[i]) {
                 match = false;
                 break;
             }
         }
-
-        if(match) return handler;
+        if(match) {
+            for(auto& [k, v] : temp_params) {
+                req.setParam(k, v);
+            }
+            return handler;
+        }
     }
 
     return std::nullopt;
