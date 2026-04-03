@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include "ynet/core/config.h"
 #include "ynet/security/session_data.h"
 #include "ynet/util/multipart_parser.h"
 
@@ -34,20 +35,18 @@ namespace ynet {
             std::optional<std::string> getHeader(const std::string& key) const;
             const QueryMap& getQueryParams() const { return query_params; }
             std::optional<std::string> getQueryParam(const std::string& key) const;
-            const std::string getClientIP() const { return client_ip; }
+            const std::string& getClientIP() const { return client_ip; }
             const std::string& getBody() const { return body; }
             const std::vector<Part>& getParts() const { return parts_; }
-            const std::string getCsrfToken() const { return csrf_token; }
-            std::optional<std::string> getFormParam(const std::string& key) const;
-            bool isParseError() { return parse_error; }
-            int getErrorCode() { return error_code; }
-
+            const std::string& getCsrfToken() const { return csrf_token; }
+            bool isParseError() const { return parse_error; }
+            int getErrorCode() const { return error_code; }
             void setClientIP(const std::string& ip) { client_ip = ip; }
             void setCsrfToken(const std::string& token) { csrf_token = token; }
-
-            std::optional<std::string> getParam(const std::string& key) const;
             void setParam(const std::string& key, const std::string& value) { params[key] = value; }
 
-            static Request parse(const char* raw, size_t len);
+            std::optional<std::string> getParam(const std::string& key) const;
+            std::optional<std::string> getFormParam(const std::string& key) const;
+            static Request parse(const char* raw, size_t len, const Config& config);
     };
 }

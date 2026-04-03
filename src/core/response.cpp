@@ -54,6 +54,7 @@ Response Response::error(int code, const std::string& msg) {
 
 std::string Response::build() {
     std::string result;
+    result.reserve(headers_.size() * 100 + body_.size());
     headers_["Content-Length"] = std::to_string(body_.size());
     auto it = status_msg.find(status_code_);
     std::string msg = (it != status_msg.end()) ? it->second : "Unknown";
@@ -70,7 +71,17 @@ std::string Response::build() {
 
 void Response::send(Connection& conn) {
     std::string data = build();
-    conn.write(data.c_str(), data.size());
+    size_t offset = 0;
+    while(true) {
+        ssize_t conn_result = conn.write(data.c_str() + offset, data.size() - offset);
+        if(conn_result == -1) {
+            break;
+        }
+        offset += conn_result;
+        if(offset == data.size()) {
+            break;
+        }
+    }
 }
 
 Response& Response::json(const std::string& json_str) {

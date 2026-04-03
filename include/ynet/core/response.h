@@ -10,12 +10,14 @@ namespace ynet {
     class Cache;
     class Response {
         private:
-            int status_code_;
+            int status_code_ = 200;
             HeaderMap headers_;
             std::string body_;
             Cache* cache_ = nullptr;
         public:
             static Response error(int code, const std::string& msg = "");
+            int getStatusCode() const { return status_code_; }
+            void setCache(Cache* c) { cache_ = c; }
             Response& status(int code);
             Response& header(const std::string& key, const std::string& value);
             Response& body(const std::string& body);
@@ -26,7 +28,5 @@ namespace ynet {
             std::optional<std::string> getHeader(const std::string& key) const;
             std::string build();
             void send(Connection& conn);
-            int getStatusCode() const { return status_code_; }
-            void setCache(Cache* c) { cache_ = c; }
     };
 }

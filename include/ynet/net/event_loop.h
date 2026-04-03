@@ -9,8 +9,7 @@ namespace ynet {
             int epfd;
             int max_events;
         public:
-            EventLoop(int max_events) 
-                : epfd(epoll_create1(0)), max_events(max_events) {}
+            EventLoop(int max_events) : epfd(epoll_create1(0)), max_events(max_events) {}
             ~EventLoop();
             static int setNonBlocking(int fd);
             int add(int fd, uint32_t events);
