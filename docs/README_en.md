@@ -33,7 +33,7 @@ Handshake, frame send/receive, onOpen/onMessage/onClose callbacks
 HTTPS (TLS), CORS, CSRF token validation, session management (auto-generation, expiration, sliding expiration), rate limiter, input sanitizer, automatic security headers (custom CSP support)
 
 ### Session
-Cookie-based session management, automatic session ID generation (`Set-Cookie`), expiration with sliding expiration, `req.session.get()`/`set()` for session data storage/retrieval, automatic security flags (HttpOnly, Secure, SameSite)
+Cookie-based session management, automatic session ID generation (`Set-Cookie`), expiration with sliding expiration, `req.session->get()`/`->set()` for session data storage/retrieval, automatic security flags (HttpOnly, Secure, SameSite)
 
 ### Cache
 File cache (mtime-based refresh), swappable eviction policy via abstract `CachePolicy` class, built-in LRU policy, configurable max cache size
@@ -241,8 +241,8 @@ req.getClientIP();
 req.getCsrfToken();
 
 // Session data
-req.session.set("key", "value");
-req.session.get("key");         // std::optional<std::string>
+req.session->set("key", "value");
+req.session->get("key");        // std::optional<std::string>
 
 // Parse error check
 req.isParseError();             // bool
@@ -274,10 +274,10 @@ app.session();
 
 app.get("/profile").handle([](ynet::Request& req, ynet::Response& res) {
     // Store data in session
-    req.session.set("user_id", "123");
+    req.session->set("user_id", "123");
 
     // Retrieve data from session
-    auto user = req.session.get("user_id");
+    auto user = req.session->get("user_id");
     if(user.has_value()) {
         res.json(R"({"user": ")" + user.value() + R"("})");
     } else {
@@ -292,6 +292,9 @@ How it works:
 - Automatic security flags: `HttpOnly`, `Secure`, `SameSite=Strict`
 - Default TTL of 1 hour, refreshed on each request (sliding expiration)
 - Invalid or expired sessions are automatically replaced with new ones
+- Background thread periodically cleans up expired sessions
+- Session ID format validation (64-char hex)
+- shared_mutex-based read/write concurrency optimization
 
 ### Cache
 

@@ -33,7 +33,7 @@ epoll 이벤트 루프, 스레드 풀
 HTTPS (TLS), CORS, CSRF 토큰 검증, 세션 관리 (자동 생성, 만료, sliding expiration), Rate Limiter, 입력 검증 (Sanitizer), 보안 헤더 자동 적용 (커스텀 CSP 지원)
 
 ### 세션
-Cookie 기반 세션 관리, 자동 세션 ID 생성 (`Set-Cookie`), 만료 및 sliding expiration, `req.session.get()`/`set()`으로 세션 데이터 저장/조회, 보안 플래그 자동 적용 (HttpOnly, Secure, SameSite)
+Cookie 기반 세션 관리, 자동 세션 ID 생성 (`Set-Cookie`), 만료 및 sliding expiration, `req.session->get()`/`->set()`으로 세션 데이터 저장/조회, 보안 플래그 자동 적용 (HttpOnly, Secure, SameSite)
 
 ### 캐시
 파일 캐시 (mtime 기반 갱신), 추상 `CachePolicy` 클래스로 eviction 정책 교체 가능, 기본 LRU 정책 제공, config에서 최대 캐시 수 설정
@@ -241,8 +241,8 @@ req.getClientIP();
 req.getCsrfToken();
 
 // 세션 데이터
-req.session.set("key", "value");
-req.session.get("key");         // std::optional<std::string>
+req.session->set("key", "value");
+req.session->get("key");        // std::optional<std::string>
 
 // 파싱 에러 체크
 req.isParseError();             // bool
@@ -274,10 +274,10 @@ app.session();
 
 app.get("/profile").handle([](ynet::Request& req, ynet::Response& res) {
     // 세션에 데이터 저장
-    req.session.set("user_id", "123");
+    req.session->set("user_id", "123");
 
     // 세션에서 데이터 조회
-    auto user = req.session.get("user_id");
+    auto user = req.session->get("user_id");
     if(user.has_value()) {
         res.json(R"({"user": ")" + user.value() + R"("})");
     } else {
@@ -292,6 +292,9 @@ app.get("/profile").handle([](ynet::Request& req, ynet::Response& res) {
 - 보안 플래그 자동 적용: `HttpOnly`, `Secure`, `SameSite=Strict`
 - 기본 TTL 1시간, 매 요청마다 갱신 (sliding expiration)
 - 잘못되거나 만료된 세션은 자동으로 새 세션 생성
+- 백그라운드 스레드가 주기적으로 만료 세션 정리
+- 세션 ID 포맷 검증 (64자 hex)
+- shared_mutex 기반 읽기/쓰기 동시성 최적화
 
 ### 캐시
 
