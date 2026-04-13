@@ -4,6 +4,7 @@
 #include <iostream>
 #include "ynet/core/server.h"
 #include "ynet/security/session.h"
+#include "ynet/util/net_util.h"
 
 using namespace ynet;
 
@@ -178,6 +179,9 @@ void Server::start() {
     }
 
     std::cerr << "[ynet] listening on " << config.bind_addr << ":" << config.port << (config.use_tls ? " (HTTPS)" : " (HTTP)") << std::endl;
+    std::cerr << "[ynet] external: " << (config.use_tls ? "https://" : "http://") << getExternalIP() << ":" << config.port << std::endl;
+
+
     ev.add(tcp_listener.getFd(), EPOLLIN);
     std::vector<epoll_event> events(config.max_connections);
 
