@@ -30,7 +30,7 @@ epoll 이벤트 루프, 스레드 풀
 핸드셰이크, 프레임 송수신, onOpen/onMessage/onClose 콜백
 
 ### 보안
-HTTPS (TLS), CORS, CSRF 토큰 검증, 세션 관리 (자동 생성, 만료, sliding expiration), Rate Limiter, 입력 검증 (Sanitizer), 보안 헤더 자동 적용 (커스텀 CSP 지원)
+HTTPS (TLS), CORS, CSRF 토큰 검증, 세션 관리 (자동 생성, 만료, sliding expiration), Rate Limiter, 입력 검증 (Sanitizer), 보안 헤더 자동 적용 (커스텀 CSP 지원), PathGuard (내장 WAF: 악성 경로 탐지, IP 자동 블랙리스트, 화이트리스트), URL 정규화 (디코딩, 더블 인코딩 차단, 경로 정규화)
 
 ### 세션
 Cookie 기반 세션 관리, 자동 세션 ID 생성 (`Set-Cookie`), 만료 및 sliding expiration, `req.session->get()`/`->set()`으로 세션 데이터 저장/조회, 보안 플래그 자동 적용 (HttpOnly, Secure, SameSite)
@@ -176,6 +176,16 @@ app.secureHeaders();                            // 기본 CSP
 app.secureHeaders("default-src 'self'; ...");   // 커스텀 CSP
 app.session();
 app.rateLimit(100, 60);
+
+// PathGuard (내장 WAF)
+app.addWhitelist("123.456.78.90");              // 화이트리스트 IP 등록
+app.pathGuard();                                 // PathGuard 활성화
+
+// 커스텀 미들웨어
+app.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
+    // 요청 전 처리
+    next();
+});
 
 // 정적 파일
 app.serveStatic("/static", "./public");
@@ -333,13 +343,65 @@ app.secureHeaders("default-src 'self'; ...");   // 커스텀 CSP
 app.session();                                  // 세션 관리
 app.rateLimit(100, 60);                         // 60초에 100번 제한
 
-// 커스텀 미들웨어 (Server 직접 사용 시)
-server.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
+// PathGuard (내장 WAF)
+app.addWhitelist("123.456.78.90");              // 화이트리스트 IP 등록
+app.pathGuard();                                 // PathGuard 활성화
+
+// 커스텀 미들웨어
+app.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
     // 요청 전 처리
     next();
     // 요청 후 처리
 });
 ```
+
+### PathGuard (내장 WAF)
+
+PathGuard는 프레임워크 내장 WAF입니다. 알려진 악성 경로 스캔을 자동으로 탐지하고 IP를 차단합니다.
+
+```cpp
+// 기본 사용 (내장 패턴으로 자동 보호)
+app.addWhitelist("123.456.78.90");  // 관리자 IP 화이트리스트
+app.pathGuard();                     // 활성화
+app.listen();
+```
+
+기본 차단 패턴:
+
+| 유형 | 패턴 |
+|------|------|
+| 정확 매칭 | `/wp-login.php`, `/phpMyAdmin`, `/pma`, `/backup.sql`, `/db.zip`, `/swagger-ui.html`, `/v2/api-docs`, `/docker-compose.yml`, `/Dockerfile`, `/package.json`, `/.well-known/security.txt` |
+| 접두사 매칭 | `/.env`, `/.git`, `/.svn`, `/.aws`, `/.ssh`, `/.vscode`, `/wp-admin`, `/cgi-bin`, `/actuator`, `/node_modules` |
+| 확장자 매칭 | `.php`, `.sql`, `.bak`, `.old`, `.zip` |
+
+커스텀 패턴 추가:
+
+```cpp
+ynet::PathGuard pg;
+pg.addExact("/secret-admin");       // 정확 매칭 추가
+pg.addPrefix("/.docker");           // 접두사 매칭 추가
+pg.addExt(".conf");                 // 확장자 매칭 추가
+app.use(pg.toMiddleware());
+```
+
+동작 방식:
+- 화이트리스트 IP는 무조건 통과
+- 패턴에 1회 매칭 시 해당 IP 즉시 블랙리스트 등록
+- 블랙리스트 IP는 이후 모든 요청 차단 (정상 경로 포함)
+- URL 디코딩 + 경로 정규화 후 검사하므로 인코딩 우회 불가
+- 더블 인코딩 요청은 파싱 단계에서 400으로 거부
+- mutex 기반 스레드 안전 블랙리스트
+
+### URL 정규화
+
+모든 요청 경로는 파싱 단계에서 자동으로 정규화됩니다.
+
+- URL 디코딩: `/%77p-admin` → `/wp-admin`
+- 더블 인코딩 차단: `/%2577p-admin` → 400 Bad Request
+- 널바이트 차단: `/safe%00/../.env` → 400 Bad Request
+- 이중 슬래시 제거: `//wp-admin` → `/wp-admin`
+- 경로 탐색 제거: `/foo/../.env` → `/.env`
+- 후행 슬래시 제거: `/wp-admin/` → `/wp-admin`
 
 ### 파일 업로드
 
@@ -454,6 +516,7 @@ include/ynet/
 ├── security/
 │   ├── cors.h
 │   ├── csrf.h
+│   ├── path_guard.h
 │   ├── rate_limiter.h
 │   ├── sanitizer.h
 │   ├── secure_headers.h
@@ -492,6 +555,7 @@ src/
 ├── security/
 │   ├── cors.cpp
 │   ├── csrf.cpp
+│   ├── path_guard.cpp
 │   ├── rate_limiter.cpp
 │   ├── sanitizer.cpp
 │   ├── secure_headers.cpp
