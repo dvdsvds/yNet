@@ -84,6 +84,14 @@ Request Request::parse(const char* raw, size_t len, const Config& config) {
         req.query_params = parseQuery(query_string);
     } 
 
+    req.path = urlDecode(req.path);
+    if(isDoubleEncoded(req.path)) {
+        req.parse_error = true;
+        req.error_code = 400;
+        return req;
+    }
+    req.path = normalizePath(req.path);
+
     req.version = data.substr(sp2 + 1, line_end - sp2 - 1);
     static const std::unordered_set<std::string> method = { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" };
     if(method.find(req.getMethod()) == method.end()) {

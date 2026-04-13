@@ -7,6 +7,7 @@
 #include "ynet/security/sanitizer.h"
 #include "ynet/security/secure_headers.h"
 #include "ynet/security/session.h"
+#include "ynet/security/path_guard.h"
 
 using namespace ynet;
 
@@ -24,4 +25,8 @@ void App::ws(const std::string& path, WsHandler handler) { server.ws(path, handl
 void App::listen() {
     server.mount(router);
     server.start();
+}
+
+void App::pathGuard() {
+    server.use(path_guard.toMiddleware());
 }

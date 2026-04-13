@@ -2,6 +2,7 @@
 
 #include "ynet/cache/cache.h"
 #include "ynet/core/config.h"
+#include "ynet/security/path_guard.h"
 #include "ynet/util/config_parser.h"
 #include "ynet/core/router.h"
 #include "ynet/core/server.h"
@@ -13,6 +14,7 @@ namespace ynet {
             Cache cache;
             Router router;
             Server server;
+            PathGuard path_guard;
         public:
             App() : config(loadConfig()), cache(config.max_cache_entries), router(cache), server(config) {}
             Route get(const std::string& path) { return router.get(path); }
@@ -31,5 +33,7 @@ namespace ynet {
             void ws(const std::string& path, WsHandler handler);
             ErrorRoute onError(int code);
             void listen();
+            void use(Middleware mw) { server.use(mw); }
+            void pathGuard();
     };
 }
