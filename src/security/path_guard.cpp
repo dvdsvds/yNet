@@ -43,6 +43,7 @@ bool PathGuard::check(const Request& req) {
     std::string ip = req.getClientIP();
     std::string path = req.getPath();
 
+    if(whitelist.find(ip) != whitelist.end()) return false;
     if(isBlocked(ip)) return true;
     if(exact_paths.find(path) != exact_paths.end()) {
         std::lock_guard<std::mutex> lock(mtx);
@@ -75,3 +76,5 @@ Middleware PathGuard::toMiddleware() {
         next();
     };
 }
+
+void PathGuard::addWhitelist(const std::string& ip) { whitelist.insert(ip); }

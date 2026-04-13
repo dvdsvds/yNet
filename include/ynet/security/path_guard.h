@@ -15,6 +15,7 @@ namespace ynet {
             std::vector<std::string> blocked_exts;
             std::unordered_set<std::string> blacklist;
             std::mutex mtx;
+            std::unordered_set<std::string> whitelist;
 
         public:
             PathGuard();
@@ -24,6 +25,7 @@ namespace ynet {
             bool isBlocked(const std::string& ip);
             bool check(const Request& req);
             Middleware toMiddleware();
+            void addWhitelist(const std::string& ip);
 
     };
 }

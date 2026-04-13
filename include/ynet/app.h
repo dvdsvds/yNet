@@ -35,5 +35,6 @@ namespace ynet {
             void listen();
             void use(Middleware mw) { server.use(mw); }
             void pathGuard();
+            void addWhitelist(const std::string& ip) { path_guard.addWhitelist(ip); }
     };
 }
