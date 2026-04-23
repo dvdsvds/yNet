@@ -1,6 +1,6 @@
 # yNet
 
-A full-stack HTTP/HTTPS web framework built with C++20
+A C++20 full-stack HTTP/HTTPS web framework
 
 **[한국어](../README.md)** | **[Website](https://ynetcpp.dev)**
 
@@ -8,7 +8,7 @@ A full-stack HTTP/HTTPS web framework built with C++20
 
 ## Introduction
 
-yNet is a lightweight HTTP/HTTPS web framework based on C++20. It provides routing, middleware, security, file uploads, WebSocket, template engine, and caching — everything you need for a web server.
+yNet is a C++20-based HTTP/HTTPS web framework. It provides everything a web server needs: routing, middleware, security, file uploads, WebSocket, template engine, and caching.
 
 ## Tech Stack
 
@@ -21,37 +21,76 @@ yNet is a lightweight HTTP/HTTPS web framework based on C++20. It provides routi
 ## Features
 
 ### HTTP Server Core
-Router-based request handling, middleware chain, request/response parsing, TCP listener and connection management, HTTP keep-alive
+- Router-based request handling
+- Middleware chain
+- Request/response parsing
+- TCP listener and connection management
+- HTTP keep-alive
 
 ### Concurrency
-epoll event loop, thread pool
+- epoll event loop
+- Thread pool
 
 ### WebSocket
-Handshake, frame send/receive, onOpen/onMessage/onClose callbacks
+- Handshake
+- Frame send/receive
+- onOpen / onMessage / onClose callbacks
 
 ### Security
-HTTPS (TLS), CORS, CSRF token validation, session management (auto-creation, expiration, sliding expiration), Rate Limiter, input validation (Sanitizer), automatic security headers (custom CSP support), PathGuard (built-in WAF: malicious path detection, automatic IP blacklisting, whitelist), URL normalization (decoding, double encoding rejection, path normalization)
+- HTTPS (TLS)
+- CORS
+- CSRF token validation
+- Session management (auto-generation, expiration, sliding expiration)
+- Rate limiter
+- Input validation (Sanitizer)
+- Automatic security headers (custom CSP supported)
+- PathGuard (built-in WAF: malicious path detection, IP auto-blacklisting, whitelisting)
+- URL normalization (decoding, double-encoding rejection, path canonicalization)
 
 ### Session
-Cookie-based session management, automatic session ID generation (`Set-Cookie`), expiration and sliding expiration, `req.session->get()`/`->set()` for session data storage/retrieval, automatic security flags (HttpOnly, Secure, SameSite)
+- Cookie-based session management
+- Automatic session ID generation (`Set-Cookie`)
+- Expiration and sliding expiration
+- Store/retrieve session data with `req.session->get()` / `->set()`
+- Security flags applied automatically (HttpOnly, Secure, SameSite)
 
 ### Cache
-File cache (mtime-based refresh), abstract `CachePolicy` class for swappable eviction policies, built-in LRU policy, configurable max cache entries
+- File cache (mtime-based invalidation)
+- Abstract `CachePolicy` class for swappable eviction policies
+- Built-in LRU policy
+- Configurable max cache size via config
 
 ### File Upload
-multipart/form-data parsing, file saving (path traversal prevention), upload size limit (413 response), filename collision prevention (auto-increment)
+- multipart/form-data parsing
+- File storage (path traversal protection)
+- Upload size limit (413 response)
+- Filename collision avoidance (auto-incrementing suffix)
 
 ### Template Engine
-One-line rendering with `res.render()`, variable substitution `{{var}}`, automatic HTML escaping, raw output `{{{var}}}`, conditionals `{{#if}}`, loops `{{#each}}`, file includes `{{> partial}}`, file change detection caching
+- Single-line rendering with `res.render()`
+- Variable substitution `{{var}}`
+- Automatic HTML escaping
+- Raw output `{{{var}}}`
+- Conditional `{{#if}}`
+- Loop `{{#each}}`
+- File include `{{> partial}}`
+- File-change detection caching
 
 ### Static File Serving
-Directory-based static file serving, directory traversal prevention
+- Directory-based static file delivery
+- Directory traversal protection
 
 ### Configuration
-Auto-generated `.conf` file with `ConfigParser`, supports port/TLS/body size/cache settings
+- Auto-generated and parsed `.conf` files (`ConfigParser`)
+- Port, TLS, body size, cache, and more
 
 ### Utilities
-JSON parser/serializer, URL encoding/decoding/query string parsing, MIME type mapping, TCP client, request logger, SHA-256 hashing
+- JSON parser/serializer
+- URL encoding/decoding/querystring parsing
+- MIME type mapping
+- TCP client
+- Request logger
+- SHA-256 hashing
 
 ---
 
@@ -74,16 +113,16 @@ ynet build
 ynet run
 ```
 
-Visit `http://localhost:8080` to see the default page.
+Visit `http://localhost:8080` to see the default welcome page.
 
 ### CLI Commands
 
 ```bash
-ynet new <project-name>   # Create new project
+ynet new <project-name>   # Create a new project
 ynet build                # Build
 ynet run                  # Run
-ynet clean                # Clean build files
-ynet help                 # Help
+ynet clean                # Remove build files
+ynet help                 # Show help
 ```
 
 ### Generated Project Structure
@@ -92,10 +131,10 @@ ynet help                 # Help
 myapp/
 ├── CMakeLists.txt        # Auto-downloads yNet via FetchContent
 ├── src/
-│   └── main.cpp          # Default handler included
+│   └── main.cpp          # Includes a default handler
 ├── static/
 └── templates/
-    └── index.html        # Default Welcome page
+    └── index.html        # Default welcome page
 ```
 
 ### Requirements
@@ -105,9 +144,9 @@ myapp/
 - CMake 3.20+
 - OpenSSL
 
-### HTTPS Setup
+### Using HTTPS
 
-Set `tls=on` in the config file and place certificates in the config directory.
+Set `tls=on` in the config file and place your certificate in the config directory.
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -keyout config/key.pem -out config/cert.pem -days 365 -nodes
@@ -153,7 +192,7 @@ int main() {
 
 ### App
 
-`App` is the entry point of yNet. It provides routing, middleware, and server configuration through a single interface.
+`App` is the entry point of yNet. It exposes routing, middleware, and server configuration through a single interface.
 
 ```cpp
 ynet::App app;
@@ -177,33 +216,33 @@ app.secureHeaders("default-src 'self'; ...");   // Custom CSP
 app.session();
 app.rateLimit(100, 60);
 
-// PathGuard (Built-in WAF)
+// PathGuard (built-in WAF)
 app.addWhitelist("123.456.78.90");              // Register whitelist IP
-app.pathGuard();                                 // Activate PathGuard
+app.pathGuard();                                 // Enable PathGuard
 
-// Custom Middleware
+// Custom middleware
 app.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
-    // Pre-request processing
+    // Pre-request logic
     next();
 });
 
-// Static Files
+// Static files
 app.serveStatic("/static", "./public");
 
 // WebSocket
 app.ws("/ws", wsHandler);
 
-// Error Handlers
+// Error handlers
 app.onError(404).html("<h1>404 Not Found</h1>");
 app.onError(500).html("<h1>500 Internal Server Error</h1>");
 
-// Start Server
+// Start the server
 app.listen();
 ```
 
 ### Config File
 
-A `config/project-name.conf` file is auto-generated on first run.
+On the first run, `config/<project-name>.conf` is automatically generated.
 
 ```
 port=8080
@@ -238,7 +277,7 @@ req.getQueryParam("key");       // std::optional<std::string>
 // form-urlencoded / multipart form data
 req.getFormParam("username");   // std::optional<std::string>
 
-// Multipart file parts
+// multipart file parts
 req.getParts();                 // const std::vector<Part>&
 
 // Raw body
@@ -254,9 +293,9 @@ req.getCsrfToken();
 req.session->set("key", "value");
 req.session->get("key");        // std::optional<std::string>
 
-// Parse error check
+// Parse error checks
 req.isParseError();             // bool
-req.getErrorCode();             // int (400, etc.)
+req.getErrorCode();             // int (e.g. 400)
 ```
 
 ### Response
@@ -265,28 +304,28 @@ req.getErrorCode();             // int (400, etc.)
 // Basic usage
 res.status(200).header("Key", "Value").body("content");
 
-// Shortcut methods
+// Shorthand methods
 res.json("{\"status\":\"ok\"}");    // Content-Type: application/json + 200
 res.html("<h1>Hello</h1>");         // Content-Type: text/html; charset=utf-8 + 200
 res.redirect("/new-path");          // 302 redirect
 res.redirect("/new-path", 301);     // 301 redirect
 
 // Template rendering
-res.render("templates/page.html", vars);  // Render with template engine + text/html response
+res.render("templates/page.html", vars);  // Renders via template engine + text/html response
 ```
 
 ### Session
 
-Register the session middleware for automatic session management.
+Registering the session middleware enables automatic session management.
 
 ```cpp
 app.session();
 
 app.get("/profile").handle([](ynet::Request& req, ynet::Response& res) {
-    // Store data in session
+    // Store data in the session
     req.session->set("user_id", "123");
 
-    // Retrieve data from session
+    // Retrieve data from the session
     auto user = req.session->get("user_id");
     if(user.has_value()) {
         res.json(R"({"user": ")" + user.value() + R"("})");
@@ -297,18 +336,18 @@ app.get("/profile").handle([](ynet::Request& req, ynet::Response& res) {
 ```
 
 How it works:
-- Auto-generates session ID + `Set-Cookie` on first request
-- Restores session via Cookie session ID on subsequent requests
-- Automatic security flags: `HttpOnly`, `Secure`, `SameSite=Strict`
-- Default TTL 1 hour, renewed on each request (sliding expiration)
-- Invalid or expired sessions are automatically replaced with new ones
-- Background thread periodically cleans up expired sessions
-- Session ID format validation (64-char hex)
-- shared_mutex-based read/write concurrency optimization
+- Generates a session ID on the first request and sends `Set-Cookie`
+- Restores the session from the cookie ID on subsequent requests
+- Security flags applied automatically: `HttpOnly`, `Secure`, `SameSite=Strict`
+- Default TTL: 1 hour, refreshed on every request (sliding expiration)
+- Invalid or expired sessions are automatically replaced with a new one
+- A background thread periodically cleans up expired sessions
+- Session ID format is validated (64-char hex)
+- Read/write concurrency optimized via `shared_mutex`
 
 ### Cache
 
-Built-in LRU cache with swappable policies.
+An LRU cache is applied by default. You can swap the policy.
 
 ```cpp
 // Default (LRU)
@@ -325,7 +364,7 @@ public:
 ynet::Cache cache(1024, std::make_unique<MyPolicy>());
 ```
 
-Set max cache entries in the config file:
+The max cache size can also be set in the config file:
 ```
 max_cache=2048
 ```
@@ -343,39 +382,82 @@ app.secureHeaders("default-src 'self'; ...");   // Custom CSP
 app.session();                                  // Session management
 app.rateLimit(100, 60);                         // 100 requests per 60 seconds
 
-// PathGuard (Built-in WAF)
+// PathGuard (built-in WAF)
 app.addWhitelist("123.456.78.90");              // Register whitelist IP
-app.pathGuard();                                 // Activate PathGuard
+app.pathGuard();                                 // Enable PathGuard
 
 // Custom middleware
 app.use([](ynet::Request& req, ynet::Response& res, ynet::Next next) {
-    // Pre-request processing
+    // Pre-request logic
     next();
-    // Post-request processing
+    // Post-request logic
 });
 ```
 
 ### PathGuard (Built-in WAF)
 
-PathGuard is a built-in WAF for the framework. It automatically detects known malicious path scans and blocks the offending IPs.
+PathGuard is yNet's built-in WAF. It automatically detects known malicious path scans and blocks the offending IP.
 
 ```cpp
-// Basic usage (automatic protection with built-in patterns)
-app.addWhitelist("123.456.78.90");  // Whitelist admin IP
-app.pathGuard();                     // Activate
+// Basic usage (auto-protection with built-in patterns)
+app.addWhitelist("123.456.78.90");  // Whitelist an admin IP
+app.pathGuard();                     // Enable
 app.listen();
 ```
 
-Default blocked patterns:
+## Block Patterns
 
-| Type | Patterns |
-|------|----------|
-| Exact match | `/wp-login.php`, `/phpMyAdmin`, `/pma`, `/backup.sql`, `/db.zip`, `/swagger-ui.html`, `/v2/api-docs`, `/docker-compose.yml`, `/Dockerfile`, `/package.json`, `/.well-known/security.txt` |
-| Prefix match | `/.env`, `/.git`, `/.svn`, `/.aws`, `/.ssh`, `/.vscode`, `/wp-admin`, `/cgi-bin`, `/actuator`, `/node_modules` |
-| Extension match | `.php`, `.sql`, `.bak`, `.old`, `.zip` |
+Paths commonly probed by malicious scanners and automated bots are blocked via three matching strategies.
 
-Custom pattern addition:
+### Exact Match
 
+Blocks requests whose path **exactly equals** one of the following.
+
+| Pattern | Description |
+|---------|-------------|
+| `/wp-login.php` | WordPress login page scan |
+| `/phpMyAdmin` | phpMyAdmin admin console probe |
+| `/pma` | phpMyAdmin shorthand probe |
+| `/backup.sql` | Exposed DB backup file probe |
+| `/db.zip` | Compressed DB dump probe |
+| `/swagger-ui.html` | Swagger UI exposure check |
+| `/v2/api-docs` | Swagger/OpenAPI spec exposure check |
+| `/docker-compose.yml` | Docker Compose config exposure (credential leak risk) |
+| `/Dockerfile` | Dockerfile exposure (internal structure leak) |
+| `/package.json` | Node.js dependency info exposure |
+| `/.well-known/security.txt` | Automated security contact lookup |
+
+### Prefix Match
+
+Blocks requests whose path **starts with** one of the following, including all sub-paths (e.g. `/.git/config`, `/wp-admin/install.php`).
+
+| Pattern | Description |
+|---------|-------------|
+| `/.env` | Environment file (API key / DB password leak risk) |
+| `/.git` | Git repo exposure (full source code leak risk) |
+| `/.svn` | SVN repo exposure |
+| `/.aws` | AWS credentials directory |
+| `/.ssh` | SSH keys directory |
+| `/.vscode` | VSCode settings (internal path / tool info leak) |
+| `/wp-admin` | WordPress admin page scan |
+| `/cgi-bin` | Legacy CGI script scan |
+| `/actuator` | Spring Boot Actuator endpoint (env / metrics exposure) |
+| `/node_modules` | Direct access to Node.js dependency directory |
+
+### Extension Match
+
+Blocks requests whose path **ends with** one of the following.
+
+| Pattern | Description |
+|---------|-------------|
+| `.php` | PHP script scan (this service does not use PHP) |
+| `.sql` | SQL dump file probe |
+| `.bak` | Backup files (`config.php.bak`, etc.) probe |
+| `.old` | Legacy-version file probe |
+| `.zip` | Compressed source / backup file probe |
+
+
+Adding custom patterns:
 ```cpp
 ynet::PathGuard pg;
 pg.addExact("/secret-admin");       // Add exact match
@@ -386,20 +468,20 @@ app.use(pg.toMiddleware());
 
 How it works:
 - Whitelisted IPs always pass through
-- A single pattern match immediately blacklists the IP
+- A single pattern match immediately blacklists the source IP
 - Blacklisted IPs are blocked on all subsequent requests (including legitimate paths)
-- Checks run after URL decoding + path normalization, making encoding bypasses impossible
+- Inspection runs after URL decoding and path normalization, so encoding-based bypasses fail
 - Double-encoded requests are rejected with 400 at the parsing stage
-- Thread-safe blacklist via mutex
+- Thread-safe blacklist backed by a mutex
 
 ### URL Normalization
 
-All request paths are automatically normalized at the parsing stage.
+Every request path is automatically normalized at the parsing stage.
 
 - URL decoding: `/%77p-admin` → `/wp-admin`
-- Double encoding rejection: `/%2577p-admin` → 400 Bad Request
-- Null byte rejection: `/safe%00/../.env` → 400 Bad Request
-- Double slash removal: `//wp-admin` → `/wp-admin`
+- Double-encoding rejection: `/%2577p-admin` → 400 Bad Request
+- Null-byte rejection: `/safe%00/../.env` → 400 Bad Request
+- Double-slash collapsing: `//wp-admin` → `/wp-admin`
 - Path traversal removal: `/foo/../.env` → `/.env`
 - Trailing slash removal: `/wp-admin/` → `/wp-admin`
 
@@ -436,7 +518,7 @@ app.ws("/ws", [](ynet::WebSocket& ws) {
         std::cout << "connected" << std::endl;
     });
     ws.onMessage([&ws](const std::string& msg) {
-        ws.sendFrame("echo: " + msg, 0x1);  // Echo text frame
+        ws.sendFrame("echo: " + msg, 0x1);  // Echo a text frame
     });
     ws.onClose([]() {
         std::cout << "disconnected" << std::endl;
@@ -457,15 +539,15 @@ app.get("/").handle([](ynet::Request& req, ynet::Response& res) {
 ```
 
 Template syntax:
-- `{{var}}` — Variable output (HTML escaped)
-- `{{{var}}}` — Raw output (no escaping)
-- `{{#if var}}...{{/if}}` — Conditional rendering
-- `{{#each items}}...{{/each}}` — Loop rendering
-- `{{> partial}}` — File include
+- `{{var}}` — variable output (HTML-escaped)
+- `{{{var}}}` — raw output (no escaping)
+- `{{#if var}}...{{/if}}` — conditional rendering
+- `{{#each items}}...{{/each}}` — loop rendering
+- `{{> partial}}` — file include
 
-### FetchContent Usage
+### Using with FetchContent
 
-Use yNet in external projects.
+You can pull yNet into external projects.
 
 ```cmake
 include(FetchContent)
@@ -479,7 +561,7 @@ FetchContent_MakeAvailable(ynet)
 target_link_libraries(your_app ynet)
 ```
 
-Or install and use with `find_package`:
+Or install it and use `find_package`:
 
 ```cmake
 find_package(ynet REQUIRED)
@@ -565,7 +647,7 @@ src/
     ├── config_parser.cpp
     ├── crypto.cpp
     ├── file_saver.cpp
-    ├── json.cpp
+    ├── json.cpd
     ├── logger.cpp
     ├── mime.cpp
     ├── multipart_parser.cpp
@@ -574,5 +656,4 @@ src/
 ```
 
 ## License
-
 Apache License 2.0
