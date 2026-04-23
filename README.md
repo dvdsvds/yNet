@@ -405,16 +405,59 @@ app.pathGuard();                     // 활성화
 app.listen();
 ```
 
-기본 차단 패턴:
+## 차단 패턴
 
-| 유형 | 패턴 |
+악성 스캐너나 자동화 봇이 자주 조회하는 경로를 세 가지 방식으로 매칭해 차단해요.
+
+### 정확 매칭
+
+요청 경로가 아래 문자열과 **완전히 일치**할 때 차단해요.
+
+| 패턴 | 설명 |
 |------|------|
-| 정확 매칭 | `/wp-login.php`, `/phpMyAdmin`, `/pma`, `/backup.sql`, `/db.zip`, `/swagger-ui.html`, `/v2/api-docs`, `/docker-compose.yml`, `/Dockerfile`, `/package.json`, `/.well-known/security.txt` |
-| 접두사 매칭 | `/.env`, `/.git`, `/.svn`, `/.aws`, `/.ssh`, `/.vscode`, `/wp-admin`, `/cgi-bin`, `/actuator`, `/node_modules` |
-| 확장자 매칭 | `.php`, `.sql`, `.bak`, `.old`, `.zip` |
+| `/wp-login.php` | WordPress 로그인 페이지 스캔 |
+| `/phpMyAdmin` | phpMyAdmin 관리 콘솔 탐색 |
+| `/pma` | phpMyAdmin 축약 경로 탐색 |
+| `/backup.sql` | 노출된 DB 백업 파일 탐색 |
+| `/db.zip` | 압축된 DB 덤프 파일 탐색 |
+| `/swagger-ui.html` | Swagger UI 문서 노출 확인 |
+| `/v2/api-docs` | Swagger/OpenAPI 스펙 노출 확인 |
+| `/docker-compose.yml` | Docker Compose 설정 노출 (크리덴셜 유출 위험) |
+| `/Dockerfile` | Dockerfile 노출 (내부 구조 유출) |
+| `/package.json` | Node.js 의존성 정보 노출 |
+| `/.well-known/security.txt` | 보안 연락처 파일 자동 조회 |
+
+### 접두사 매칭
+
+요청 경로가 아래 문자열로 **시작**하면 차단해요. 하위 경로까지 전부 포함됩니다 (예: `/.git/config`, `/wp-admin/install.php`).
+
+| 패턴 | 설명 |
+|------|------|
+| `/.env` | 환경변수 파일 (API 키·DB 비밀번호 유출 위험) |
+| `/.git` | Git 저장소 노출 (소스코드 전체 유출 위험) |
+| `/.svn` | SVN 저장소 노출 |
+| `/.aws` | AWS 크리덴셜 디렉토리 |
+| `/.ssh` | SSH 키 디렉토리 |
+| `/.vscode` | VSCode 설정 (내부 경로·도구 정보 유출) |
+| `/wp-admin` | WordPress 관리자 페이지 스캔 |
+| `/cgi-bin` | 레거시 CGI 스크립트 스캔 |
+| `/actuator` | Spring Boot Actuator 엔드포인트 (환경·메트릭 노출) |
+| `/node_modules` | Node.js 의존성 디렉토리 직접 접근 |
+
+### 확장자 매칭
+
+요청 경로가 아래 확장자로 **끝나면** 차단해요.
+
+| 패턴 | 설명 |
+|------|------|
+| `.php` | PHP 스크립트 스캔 (본 서비스는 PHP 미사용) |
+| `.sql` | SQL 덤프 파일 탐색 |
+| `.bak` | 백업 파일 (`config.php.bak` 등) 탐색 |
+| `.old` | 구버전 파일 탐색 |
+| `.zip` | 압축된 소스·백업 파일 탐색 |
+
 
 커스텀 패턴 추가:
-
 ```cpp
 ynet::PathGuard pg;
 pg.addExact("/secret-admin");       // 정확 매칭 추가
